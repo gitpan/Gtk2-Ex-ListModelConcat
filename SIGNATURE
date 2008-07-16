@@ -1,0 +1,40 @@
+This file contains message digests of all files listed in MANIFEST,
+signed via the Module::Signature module, version 0.55.
+
+To verify the content in this distribution, first make sure you have
+Module::Signature installed, then type:
+
+    % cpansign -v
+
+It will check each file's integrity, as well as the signature's
+validity.  If "==> Signature verified OK! <==" is not displayed,
+the distribution may already have been compromised, and you should
+not run its Makefile.PL or Build.PL.
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+SHA1 8624bcdae55baeef00cd11d5dfcfa60f68710a02 COPYING
+SHA1 f4b8c79f945da10e33d992a061731ac180cc6b6c MANIFEST
+SHA1 1e48a2fc19907943c888cef4060584bf8a564a33 MANIFEST.SKIP
+SHA1 a4dc8bd9f073b5e8e4613636f240b7519aec29dc META.yml
+SHA1 b6638ec4c7012e405ef4a867b8ab77fee53e1bdd Makefile.PL
+SHA1 25492fe51eed75d31c36b9a49edac58a541f3c0d README
+SHA1 7c5998f45f1e5726cb1f68566c633d29e0b87373 debian/changelog
+SHA1 1b6453892473a467d07372d45eb05abc2031647a debian/compat
+SHA1 b207cb4ca5a76450e5040e2fe8070658b71da090 debian/control
+SHA1 fda6837605cf2d85c2d5598bcb1975497aebcfe7 debian/copyright
+SHA1 1c1906eb0d8274488769c68d1d21798377ffbb65 debian/rules
+SHA1 493fb187674e637a874635828ccb119ca6869e44 debian/watch
+SHA1 b3c9df91a25b0d470fc5db8fc40fce8e4a844cae devel/run.pl
+SHA1 99deb6797d85beb80f21469f0bb415f931858259 examples/demo.pl
+SHA1 104954771bfd7784a97f18579f72e611587c6ed9 lib/Gtk2/Ex/ListModelConcat.pm
+SHA1 7d6f6331fa31dfc8ffb0fc8f8aab86b887f9d178 t/ListModelConcat.t
+SHA1 a661a39e55a4127aecb1b97a631c4f01f7dce8c6 t/pod.t
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (GNU/Linux)
+
+iD8DBQFIfntULFMCIV9q3ToRApREAJ0R5WKFcjZE/rFo3rjpO5KdCqUKcQCgmIVQ
+aVyoqv6xDF/ZFpnxbGRmxWw=
+=YKkh
+-----END PGP SIGNATURE-----
