@@ -66,9 +66,10 @@ foreach my $elem (['Concat',$concat],
 }
 
 {
-  my $label = Gtk2::Label->new
-('Drag items around in the separate stores or in the Concat.
-In the Concat drags can move items between the stores.');
+  my $label = Gtk2::Label->new (<<'HERE');
+Drag items around in the separate stores or in the Concat.
+But Gtk2::ListStore won't let you move items between the stores.
+HERE
   $vbox->pack_start ($label, 0,0,0);
 }
 

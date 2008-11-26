@@ -30,8 +30,9 @@ WriteMakefile
    SIGN         => 1,
 
    PREREQ_PM    => {
-                    # any version should be ok
-                    'Gtk2' => 0,
+                    # version 1.201 for stack fix in drag_data_get(), and at
+                    # least 1.200 for it and $iter->set() to exist
+                    'Gtk2' => '1.201',
 
                     # my Glib-Ex-ObjectBits
                     'Glib::Ex::SignalIds' => 0,
@@ -103,6 +104,17 @@ copyright-years-check:
 
 debug-constants-check:
 	if egrep -n 'DEBUG => [^0]' $(TO_INST_PM); then exit 1; else exit 0; fi
+
+diff-prev:
+	rm -rf diff.tmp
+	mkdir diff.tmp
+	cd diff.tmp \
+	&& tar xfz ../$(NAME)-`expr $(VERSION) - 1`.tar.gz \
+	&& tar xfz ../$(NAME)-$(VERSION).tar.gz
+	-cd diff.tmp; diff -ur $(NAME)-`expr $(VERSION) - 1` \
+	                       $(NAME)-$(VERSION) >tree.diff
+	-less diff.tmp/tree.diff
+	rm -rf diff.tmp
 
 MAKE_FRAG
 }

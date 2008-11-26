@@ -19,11 +19,11 @@
 package Gtk2::Ex::ListModelConcat;
 use strict;
 use warnings;
-use Gtk2;
+use Gtk2 '1.201'; # 1.201 for drag_data_get() stack fix
 use Carp;
 use List::Util qw(min max);
 
-our $VERSION = 1;
+our $VERSION = 2;
 
 use constant DEBUG => 0;
 
@@ -35,7 +35,7 @@ use Glib::Object::Subclass
   properties => [ Glib::ParamSpec->scalar
                   ('models',
                    'models',
-                   'Arrayref of Gtk2::TreeModel objects to concatenate.',
+                   'Arrayref of list model objects to concatenate.',
                    Glib::G_PARAM_READWRITE)
                 ];
 
@@ -92,10 +92,7 @@ sub SET_PROPERTY {
 
 # gtk_tree_model_get_flags
 #
-sub GET_FLAGS {
-  my ($self) = @_;
-  return [ 'list-only' ];
-}
+use constant GET_FLAGS => [ 'list-only' ];
 
 # gtk_tree_model_get_n_columns
 #
@@ -166,26 +163,17 @@ sub ITER_NEXT {
 sub ITER_CHILDREN {
   my ($self, $iter) = @_;
   if (DEBUG) { print "ListModelConcat iter_children\n"; }
-  if (! defined $iter && ITER_HAS_CHILD ($self, undef)) {
-    return _index_to_iter ($self, 0);
-  } else {
-    return undef;
-  }
+  push @_, 0;
+  goto &ITER_NTH_CHILD;
 }
 
 # gtk_tree_model_iter_has_child
+# $iter never undef here
 #
 sub ITER_HAS_CHILD {
   my ($self, $iter) = @_;
-  if (DEBUG) { print "ListModelConcat has_child ",
-                 defined $iter ? $iter->[1] : 'undef', "\n"; }
-  if (defined $iter) {
-    return 0;  # nothing under rows
-  } else {
-    # Crib note: prior to Gtk2-Perl 1.200 the return had to be a number, the
-    # usual boolean false from != is ok for that
-    return (_total_length($self) != 0);
-  }
+  if (DEBUG) { print "ListModelConcat has_child ",$iter->[1],"\n"; }
+  return 0; # nothing under rows
 }
 
 # gtk_tree_model_iter_n_children
@@ -217,11 +205,10 @@ sub ITER_NTH_CHILD {
 
 # gtk_tree_model_iter_parent
 #
-sub ITER_PARENT {
-  my ($self, $iter) = @_;
-  if (DEBUG) { print "ListModelConcat iter_parent\n"; }
-  return undef;
-}
+# my ($self, $iter) = @_;
+# no parent rows in a list-only
+use constant ITER_PARENT => undef;
+
 
 #------------------------------------------------------------------------------
 # our iters
@@ -439,6 +426,8 @@ sub _do_rows_reordered {
 
 
 #------------------------------------------------------------------------------
+# Gtk2::ListStore compatible methods
+
 
 # gtk_list_store_append
 # new row at end, return iter pointing to it
@@ -659,19 +648,28 @@ sub _need_method {
 
 # gtk_list_store_remove
 #
-# ENHANCE-ME: the real list store invalidates the given iter by zapping the
-# stamp
-#
 sub remove {
   my ($self, $iterobj) = @_;
-  if (! defined $iterobj) { croak 'Cannot remove iter \'undef\''; }
+  if (! defined $iterobj) { croak 'Cannot remove iter "undef"'; }
   my $index = _iterobj_to_index ($self, $iterobj);
   my ($model, $subiter) = _index_to_subiter ($self, $index);
   $model->remove ($subiter);
 
-  # return true if more rows, with $iterobj pointing at the next one, which
-  # for us that means no change to the index in $iterobj
-  return ($index < _total_length($self));
+  if ($index < _total_length($self)) {
+    # FIXME: if a submodel appears multiple times then we have to adjust the
+    # index in $iter if it's the second or subsequent appearance of the row
+    # which is removed.  Maybe could recompute $index based possibly changed
+    # $model starting position and possibly changed $subiter->get_path
+    # position.  Or have _do_row_deleted() update in TreeRowReference style.
+    #
+    # more rows, no change to index in $iterobj
+    return 1;
+
+  } else {
+    # zap iter so it's not accidentally re-used (same as GtkListStore does)
+    $iterobj->set ([ 0, 0, undef, undef ]);
+    return 0; # no more rows
+  }
 }
 
 sub _pre_duplicates {
@@ -777,7 +775,7 @@ sub _treemodel_extract_row {
   return map {; ($_, $model->get_value($iter,$_)) }
     0 .. $model->get_n_columns - 1;
 }
-# multi-column extraction from a perl-code model broken in Gtk2-Perl 1.183
+# multi-column extraction from a perl-code model broken in Gtk2-Perl 1.191
 # sub _treemodel_extract_row {
 #   my ($model, $iter) = @_;
 #   my @row = $model->get($iter);
@@ -797,6 +795,7 @@ sub set_value {
 # gtk_tree_drag_source_row_draggable ($self, $path)
 #
 sub ROW_DRAGGABLE {
+  # my ($self, $path) = @_;
   unshift @_, 'row_draggable';
   goto &_drag_source;
 }
@@ -804,30 +803,22 @@ sub ROW_DRAGGABLE {
 # gtk_tree_drag_source_drag_data_delete ($self, $path)
 #
 sub DRAG_DATA_DELETE {
+  # my ($self, $path) = @_;
   unshift @_, 'drag_data_delete';
   goto &_drag_source;
 }
 
-# gtk_tree_drag_source_drag_data_get
+# gtk_tree_drag_source_drag_data_get ($self, $path, $sel)
 #
 sub DRAG_DATA_GET {
-  my ($self, $path, $sel) = @_;
-  # hack pending Gtk2-Perl support for $sel arg to drag_data_get()
-  my $method = sub {
-    my ($model, $subpath, $sel) = @_;
-    return eval { $model->drag_data_get ($subpath, $sel); 1 }
-      || do {
-        if (DEBUG) {print "  fallback own set_row_drag_data\n"; }
-        $sel->set_row_drag_data ($self, $path);
-      };
-  };
-  unshift @_, $method;
+  # my ($self, $path, $sel) = @_;
+  unshift @_, 'drag_data_get';
   goto &_drag_source;
 }
 
 sub _drag_source {
-  my ($method, $self, $path, @sel) = @_;
-  if (DEBUG) { print "ListModelConcat ",uc($method)," path=",
+  my ($method, $self, $path, @sel_arg) = @_;
+  if (DEBUG) { print "ListModelConcat \U$method\E path=",
                  $path->to_string,"\n"; }
 
   if ($path->get_depth != 1) {
@@ -844,7 +835,7 @@ sub _drag_source {
   my $subpath = Gtk2::TreePath->new_from_indices ($subindex);
   if (DEBUG) { print "  submodel row_draggable subpath=",
                  $subpath->to_string,"\n"; }
-  my $ret = $model->$method ($subpath, @sel);
+  my $ret = $model->$method ($subpath, @sel_arg);
   if (DEBUG) { print "  ",$ret?"yes":"no","\n"; }
   return $ret;
 }
@@ -853,48 +844,19 @@ sub _drag_source {
 # drag destination
 
 # gtk_tree_drag_dest_row_drop_possible
-#
-sub ROW_DROP_POSSIBLE {
-  my ($self, $path, $sel) = @_;
-  if (DEBUG) { print "ListModelConcat ROW_DROP_POSSIBLE, to path=",
-                 $path->to_string," type=",$sel->type->name,"\n"; }
-  if ($path->get_depth != 1) {
-    if (DEBUG) { print "  no, not a toplevel row\n"; }
-    return 0;
-  }
-  my ($index) = $path->get_indices;
-  my ($model, $subindex) = _index_to_subindex_post ($self, $index);
-
-  # if the submodel implements DragDest and it's prepared to accept $sel
-  # directly
-  if ($model->isa('Gtk2::TreeDragDest')) {
-    my $subpath = Gtk2::TreePath->new_from_indices ($subindex);
-    if ($model->row_drop_possible ($subpath, $sel)) {
-      if (DEBUG) { print "  yes, submodel row_drop_possible()\n"; }
-      return 1;
-    }
-  }
-
-  # otherwise we can copy a row to any submodel implementing
-  # 'insert_with_values'
-  if ($sel->type->name eq 'GTK_TREE_MODEL_ROW'
-      && $model->can('insert_with_values')) {
-    my ($src_model, $src_path) = $sel->get_row_drag_data;
-    if (_column_types_compatible ($src_model, $model)) {
-      if (DEBUG) { print "  yes, submodel insert_with_values()\n"; }
-      return 1;
-    }
-  }
-
-  if (DEBUG) { print "  no\n"; }
-  return 0;
-}
-
 # gtk_tree_drag_dest_drag_data_received
 #
+sub ROW_DROP_POSSIBLE {
+  push @_, 'row_drop_possible';
+  goto &_drag_dest;
+}
 sub DRAG_DATA_RECEIVED {
-  my ($self, $dst_path, $sel) = @_;
-  if (DEBUG) { print "ListModelConcat DRAG_DATA_RECEIVED, to path=",
+  push @_, 'drag_data_received';
+  goto &_drag_dest;
+}
+sub _drag_dest {
+  my ($self, $dst_path, $sel, $method) = @_;
+  if (DEBUG) { print "ListModelConcat \U$method\E, to path=",
                  $dst_path->to_string," type=",$sel->type->name,"\n";
                if ($sel->type->name eq 'GTK_TREE_MODEL_ROW') {
                  my ($src_model, $src_path) = $sel->get_row_drag_data;
@@ -907,80 +869,24 @@ sub DRAG_DATA_RECEIVED {
     return 0;
   }
   my ($dst_index) = $dst_path->get_indices;
-  my ($dst_submodel, $dst_subindex) = _index_to_subindex_post ($self,
-                                                               $dst_index);
+  my ($dst_submodel, $dst_subindex)
+    = _index_to_subindex_post ($self, $dst_index);
+
+  if (! $dst_submodel->isa('Gtk2::TreeDragDest')) {
+    if (DEBUG) { print "  no, submodel not a TreeDragDest\n"; }
+    return 0;
+  }
   my $dst_subpath = Gtk2::TreePath->new_from_indices ($dst_subindex);
-
-  # maybe the submodel will accept the data directly
-  if ($dst_submodel->isa('Gtk2::TreeDragDest')) {
-    if ($dst_submodel->drag_data_received ($dst_subpath, $sel)) {
-      if (DEBUG) { print "  accepted by submodel\n";}
-      return 1;
-    }
-  }
-
-  # otherwise we can handle a row
-  my ($src_model, $src_path) = $sel->get_row_drag_data;
-  if (! $src_model) {
-    if (DEBUG) { print "  no, source is not a model row\n";}
-    # gtkliststore.c has a fixme about perhaps handling some data targets,
-    # the same would apply here, a drop of plain text into a row with a
-    # single Glib::String column would be fairly sensible.  But perhaps
-    # better is to leave that to the submodels to handle.
+  if (! $dst_submodel->$method ($dst_subpath, $sel)) {
+    if (DEBUG) { print "  no, submodel $method() false\n"; }
     return 0;
   }
-
-  # if the drag is between different models then copy columns (of the lesser
-  # number), provided the types are the same or compatible
-  #
-  my $cols = min ($self->get_n_columns, $src_model->get_n_columns);
-  if (! _column_types_compatible ($src_model, $self, $cols)) {
-    return 0;
-  }
-  my $src_iter = $src_model->get_iter ($src_path);
-  if (! $src_iter) {
-    if (DEBUG) { print "  no iter for source path\n";}
-    return 0;
-  }
-  my @row = _treemodel_extract_row ($src_model, $src_iter);
-  if (@row > 2*$cols) { $#row = 2*$cols - 1; }
-
-  # data receive is supposed to be rugged against dodgy stuff, so protect
-  # here with an eval
-  if (! eval { $self->insert_with_values ($dst_index, @row); 1 }) {
-    if (DEBUG) { print "  error from insert_with_values: $@\n"; }
-    return 0;
-  }
-  return 1;
-}
-
-# return true if the first $cols many columns of $src_model and $dst_model
-# are compatible enough for a data copy
-#
-# must check "eq" of types, not just isa(), because some types like
-# Glib::Float are not perl classes as such (as of Glib-Perl 1.190 at least)
-#
-sub _column_types_compatible {
-  my ($src_model, $dst_model, $cols) = @_;
-  if ($src_model == $dst_model) { return 1; }
-
-  if (! defined $cols) {
-    $cols = min ($src_model->get_n_columns, $dst_model->get_n_columns);
-  }
-  foreach my $i (0 .. $cols-1) {
-    my $src_type = $src_model->get_column_type ($i);
-    my $dst_type = $dst_model->get_column_type ($i);
-    if (! ($src_type eq $dst_type || $src_type->isa($dst_type))) {
-      if (DEBUG) { print "  different types in column $i:",
-                     " $src_type, $dst_type\n"; }
-      return 0;
-    }
-  }
+  if (DEBUG) { print "  yes from submodel\n"; }
   return 1;
 }
 
 # return ($model, $subindex), and allowing a $index which is past the end of
-# $self to likewise give a subindex beyond the end of the submodel
+# $self to likewise give a subindex beyond the end of the last submodel
 #
 sub _index_to_subindex_post {
   my ($self, $index) = @_;
@@ -993,8 +899,8 @@ sub _index_to_subindex_post {
   return ($model, $index - $positions->[-2]);
 }
 
-
-1; __END__
+1;
+__END__
 
 =head1 NAME
 
@@ -1020,11 +926,11 @@ and implements the interfaces
 
 =head1 DESCRIPTION
 
-C<Gtk2::Ex::ListModelConcat> presents a set of list-type TreeModels
+C<Gtk2::Ex::ListModelConcat> presents a set of list type TreeModels
 concatenated together as a single list.  A Concat doesn't hold any data
 itself, it just presents the sub-models' content.  C<Gtk2::ListStore>
 objects are suitable as the sub-models, but any similar list-type model can
-be used too.
+be used.
 
 Changes in the sub-models are reported up through the Concat with the usual
 C<row-changed> etc signals.  Conversely change methods are implemented by
@@ -1040,15 +946,16 @@ course it cannot be inside itself (directly or indirectly).
 =head2 Drag and Drop
 
 ListModelConcat implements TreeDragSource and TreeDragDest, allowing rows to
-be moved by dragging in a C<Gtk2::TreeView> or similar.
+be moved by dragging in a C<Gtk2::TreeView> or similar.  The actual
+operations are delgated to the submodels, so a row can be dragged if the
+originating submodel is a TreeDragSource, and a location is a drop point if
+the submodel there is a TreeDragDest.
 
-A row can be dragged if its sub-model implements the TreeDragSource
-interface.  A position can be a drag destination if its sub-model implements
-either the TreeDragDest interface or a C<Gtk2::ListStore> style
-C<insert_with_values> method.  TreeDragDest is preferred, letting the
-submodel take care of data conversion, but the C<insert_with_values>
-fallback is needed for drags between different ListStores, since its
-TreeDragDest only accepts its own rows.
+It's worth noting the standard C<Gtk2::ListStore> models only accept drops
+of their own rows, ie. a re-ordering, not movement of rows between different
+models.  This is reasonable if different models might have different
+natures, but you might want to subclass or use a wrapper for a more liberal
+policy between compatible models.
 
 =head1 PROPERTIES
 
@@ -1132,7 +1039,7 @@ asks the sub-models when required (using the first sub-model, curently).
 These are per the C<Gtk2::ListStore> methods.
 
 Note C<set> overrides the C<set> in C<Glib::Object> which normally sets
-object properties.  You can use the C<set_property> alias instead.
+object properties.  You can use the C<set_property> name instead.
 
     $model->set_property ('propname' => $value);
 
@@ -1140,7 +1047,7 @@ object properties.  You can use the C<set_property> alias instead.
 
 =head1 SIGNALS
 
-The TreeModel interface (implemented by ListModelConcat) provides the
+The TreeModel interface implemented by ListModelConcat provides the
 following usual signals
 
     row-changed    ($concat, $path, $iter, $userdata)
@@ -1149,12 +1056,12 @@ following usual signals
     rows-reordered ($concat, $path, $iter, $arrayref, $userdata)
 
 Because ListModelConcat is C<list-only>, the path to C<row-changed>,
-C<row-inserted> and C<row-deleted> always has depth 1, and the path to
-C<rows-reordered> is always depth 0 and the iter there is always C<undef>.
+C<row-inserted> and C<row-deleted> is always depth 1, and the path to
+C<rows-reordered> is always depth 0 and the iter there always C<undef>.
 
 When a change occurs in a sub-model the corresponding signal is reported up
-through Concat too.  Of course the path and iter reported by the Concat are
-in its "concatenated" coordinates and iters, not the sub-model's.
+through Concat.  The path and iter are of course reported by the Concat in
+its "concatenated" coordinates and iters, not the sub-model's.
 
 =head1 BUGS
 
@@ -1173,7 +1080,7 @@ seem one-at-a-time for the handlers.)
 
 What does work fine is to have multiple TreeModelFilters selecting different
 parts of a single underlying model.  As long as a given row only appears
-once it doesn't matter where its ultimate storage location is.
+once it doesn't matter where the ultimate storage location is.
 
 =head1 SEE ALSO
 

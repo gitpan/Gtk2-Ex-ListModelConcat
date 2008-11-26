@@ -27,9 +27,9 @@ Bugs: mailto:user42@zip.com.au
 
 Package: libgtk2-ex-listmodelconcat-perl
 Architecture: all
-Depends: libgtk2-perl, libglib-ex-objectbits-perl
+Depends: libgtk2-perl (>= 1.200), libglib-ex-objectbits-perl
 Description: Concatenate list model objects in Gtk2-Perl
  Gtk2::Ex::ListModelConcat presents the contents of multiple list type
- Gtk2::TreeModel objects as a single concatenated list.  Changes in
+ Gtk2::TreeModel objects as a single concatenated model.  Changes in
  the sub-models are reported up, and changes can be applied down
- through the Concat model, if the sub-models are editable.
+ through the Concat model if the sub-models are editable.

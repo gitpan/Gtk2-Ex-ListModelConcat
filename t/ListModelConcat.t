@@ -1,3 +1,5 @@
+#!/usr/bin/perl
+
 # Copyright 2008 Kevin Ryde
 
 # This file is part of Gtk2-Ex-ListModelConcat.
@@ -18,11 +20,13 @@
 
 use strict;
 use warnings;
-use Test::More tests => 211;
-
 use Gtk2::Ex::ListModelConcat;
+use Test::More tests => 215;
 
 use constant VERBOSE => 0;
+
+ok ($Gtk2::Ex::ListModelConcat::VERSION >= 2);
+ok (Gtk2::Ex::ListModelConcat->VERSION  >= 2);
 
 # return arrayref
 sub model_column_types {
@@ -101,6 +105,7 @@ sub listen_reorder {
 #------------------------------------------------------------------------------
 { my $concat = Gtk2::Ex::ListModelConcat->new;
 
+  is_deeply ([@{$concat->get_flags}], ['list-only']);
   is ($concat->get_n_columns, 0);
   is ($concat->iter_n_children(undef), 0);
   is ($concat->get_iter_first, undef);
@@ -885,6 +890,7 @@ if (VERBOSE) { diag "move_before() across submodel, up to end\n"; }
 
   ok (! $concat->remove ($iter));
   ok (! $concat->iter_is_valid ($iter));
+  is_deeply ($iter->to_arrayref(0), [0,0,undef,undef]);
   is_deeply (listmodel_contents($concat),
              [ ]);
   is_deeply (listmodel_contents($s1),
@@ -1166,4 +1172,3 @@ if (VERBOSE) { diag "move_before() across submodel, up to end\n"; }
 }
 
 exit 0;
-
