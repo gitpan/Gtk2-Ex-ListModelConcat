@@ -21,12 +21,46 @@
 use strict;
 use warnings;
 use Gtk2::Ex::ListModelConcat;
-use Test::More tests => 215;
+use Test::More tests => 218;
 
 use constant VERBOSE => 0;
 
-ok ($Gtk2::Ex::ListModelConcat::VERSION >= 2);
-ok (Gtk2::Ex::ListModelConcat->VERSION  >= 2);
+ok ($Gtk2::Ex::ListModelConcat::VERSION >= 3);
+ok (Gtk2::Ex::ListModelConcat->VERSION  >= 3);
+
+diag ("Perl-Gtk2 version ",Gtk2->VERSION);
+diag ("Perl-Glib version ",Glib->VERSION);
+diag ("Compiled against Glib version ",
+      Glib::MAJOR_VERSION(), ".",
+      Glib::MINOR_VERSION(), ".",
+      Glib::MICRO_VERSION(), ".");
+diag ("Running on       Glib version ",
+      Glib::major_version(), ".",
+      Glib::minor_version(), ".",
+      Glib::micro_version(), ".");
+diag ("Compiled against Gtk version ",
+      Gtk2::MAJOR_VERSION(), ".",
+      Gtk2::MINOR_VERSION(), ".",
+      Gtk2::MICRO_VERSION(), ".");
+diag ("Running on       Gtk version ",
+      Gtk2::major_version(), ".",
+      Gtk2::minor_version(), ".",
+      Gtk2::micro_version(), ".");
+
+# pretend insert_with_values() not available, as pre-Gtk 2.6
+#
+if (0 || $ENV{'MY_DEVELOPMENT_HACK_NO_INSERT_WITH_VALUES'}) {
+  Gtk2::ListStore->can('insert_with_values'); # force autoload
+  diag "can insert_with_values: ",
+    Gtk2::ListStore->can('insert_with_values')||'no',"\n";
+
+  undef *Gtk2::ListStore::insert_with_values;
+
+  diag "can insert_with_values: ",
+    Gtk2::ListStore->can('insert_with_values')||'no',"\n";
+  die if Gtk2::ListStore->can('insert_with_values');
+}
+
 
 # return arrayref
 sub model_column_types {
@@ -149,7 +183,7 @@ sub listen_reorder {
 }
 
 { my $store = Gtk2::ListStore->new ('Glib::String');
-  $store->insert_with_values (0, 0=>'zero');
+  $store->set_value ($store->insert(0), 0=>'zero');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $store ]);
 
   is ($concat->iter_n_children(undef), 1);
@@ -172,7 +206,7 @@ sub listen_reorder {
 }
 
 { my $store = Gtk2::ListStore->new ('Glib::String');
-  $store->insert_with_values (0, 0=>'zero');
+  $store->set_value ($store->insert(0), 0=>'zero');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $store, $store ]);
 
   is ($concat->iter_n_children(undef), 2);
@@ -194,14 +228,14 @@ sub listen_reorder {
   $iter = $concat->iter_next ($iter);
   is ($iter, undef);
 
-  $store->insert_with_values (0, 0=>'one');
+  $store->set_value ($store->insert(0), 0=>'one');
 }
 
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is ($concat->iter_n_children(undef), 2);
@@ -242,8 +276,8 @@ sub listen_reorder {
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_inserted ($concat, sub {
@@ -267,8 +301,8 @@ sub listen_reorder {
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_inserted ($concat, sub {
@@ -293,8 +327,8 @@ sub listen_reorder {
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   $concat->clear;
@@ -324,9 +358,13 @@ sub listen_reorder {
 #------------------------------------------------------------------------------
 # insert_with_values
 
-{
+SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
+
+  $s1->can('insert_with_values')
+    or skip 'no insert_with_values()', 12;
+
   $s1->insert_with_values (0, 0=>'zero');
   $s2->insert_with_values (0, 0=>'one');
   $s2->insert_with_values (1, 0=>'two');
@@ -384,9 +422,9 @@ sub listen_reorder {
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_inserted
@@ -424,9 +462,9 @@ sub listen_reorder {
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_inserted
@@ -462,18 +500,31 @@ sub listen_reorder {
 # iter_is_valid
 
 {
-  my $s1 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1 ]);
+  my $store = Gtk2::ListStore->new ('Glib::String');
+  $store->set_value ($store->insert(0), 0=>'zero');
+  my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $store ]);
+  my $c2 = Gtk2::Ex::ListModelConcat->new (models => [ $store ]);
+
   { my $iter = $concat->get_iter_first;
-    ok ($concat->iter_is_valid($iter));
+    ok ($concat->iter_is_valid($iter),
+        'iter_is_valid() own iter good');
+    ok (! $c2->iter_is_valid($iter),
+        'iter_is_valid() iter from other concat bad');
   }
   { my $iter = Gtk2::TreeIter->new_from_arrayref([0,0,0,0]);
-    ok (! $concat->iter_is_valid($iter));
+    ok (! $concat->iter_is_valid($iter),
+        'iter_is_valid() all zeros no good');
+  }
+  { my $iter = $store->get_iter_first;
+    ok ($store->iter_is_valid($iter),
+        'iter_is_valid() iter from child ok on itself');
+    ok (! $concat->iter_is_valid($iter),
+        'iter_is_valid() iter from child no good on concat');
   }
   { my $iter = $concat->get_iter_first;
-    $s1->remove ($s1->get_iter_first);
-    ok (! $concat->iter_is_valid($iter));
+    $store->remove ($store->get_iter_first);
+    ok (! $concat->iter_is_valid($iter),
+        'iter_is_valid() iter no good after child row removal');
   }
 }
 
@@ -481,14 +532,14 @@ sub listen_reorder {
 #------------------------------------------------------------------------------
 # move_after
 
-if (VERBOSE) { diag "move_after() no change"; }
+diag "move_after() no change";
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
-  $s2->insert_with_values (2, 0=>'three');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
+  $s2->set_value ($s2->insert(2), 0=>'three');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   # as of gtk 2.12 Gtk2::ListStore emits a reordered signal for this
@@ -508,14 +559,14 @@ if (VERBOSE) { diag "move_after() no change"; }
              's2 contents');
 }
 
-if (VERBOSE) { diag "move_after() within submodel, upwards"; }
+diag "move_after() within submodel, upwards";
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
-  $s2->insert_with_values (2, 0=>'three');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
+  $s2->set_value ($s2->insert(2), 0=>'three');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder
@@ -538,14 +589,14 @@ if (VERBOSE) { diag "move_after() within submodel, upwards"; }
              's2 contents');
 }
 
-if (VERBOSE) { diag "move_after() within submodel, downwards"; }
+diag "move_after() within submodel, downwards";
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
-  $s2->insert_with_values (2, 0=>'three');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
+  $s2->set_value ($s2->insert(2), 0=>'three');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder
@@ -568,13 +619,17 @@ if (VERBOSE) { diag "move_after() within submodel, downwards"; }
              's2 contents');
 }
 
-if (VERBOSE) { diag "move_after() across submodel, downwards\n"; }
-{
+diag "move_after() across submodel, downwards\n";
+SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
+
+  $s1->can('insert_with_values')
+    or skip 'no insert_with_values()', 4;
+
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder
@@ -593,14 +648,18 @@ if (VERBOSE) { diag "move_after() across submodel, downwards\n"; }
              [ 'one' ]);
 }
 
-if (VERBOSE) { diag "move_after() across submodel, upwards\n"; }
-{
+diag "move_after() across submodel, upwards\n";
+SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
-  $s2->insert_with_values (2, 0=>'three');
+
+  $s1->can('insert_with_values')
+    or skip 'no insert_with_values()', 4;
+
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
+  $s2->set_value ($s2->insert(2), 0=>'three');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder
@@ -620,13 +679,17 @@ if (VERBOSE) { diag "move_after() across submodel, upwards\n"; }
              [ 'one', 'two', 'zero', 'three' ]);
 }
 
-if (VERBOSE) { diag "move_after() across submodel, upwards to end\n"; }
-{
+diag "move_after() across submodel, upwards to end\n";
+SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
+
+  $s1->can('insert_with_values')
+    or skip 'no insert_with_values()', 4;
+
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder
@@ -646,13 +709,17 @@ if (VERBOSE) { diag "move_after() across submodel, upwards to end\n"; }
              [ 'one', 'two', 'zero' ]);
 }
 
-if (VERBOSE) { diag "move_after() across submodel, down to start\n"; }
-{
+diag "move_after() across submodel, down to start\n";
+SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
+
+  $s1->can('insert_with_values')
+    or skip 'no insert_with_values()', 4;
+
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder
@@ -674,14 +741,14 @@ if (VERBOSE) { diag "move_after() across submodel, down to start\n"; }
 #------------------------------------------------------------------------------
 # move_before
 
-if (VERBOSE) { diag "move_before() no change"; }
+diag "move_before() no change";
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
-  $s2->insert_with_values (2, 0=>'three');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
+  $s2->set_value ($s2->insert(2), 0=>'three');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   # as of gtk 2.12 Gtk2::ListStore emits a reordered signal for this
@@ -701,14 +768,14 @@ if (VERBOSE) { diag "move_before() no change"; }
              's2 contents');
 }
 
-if (VERBOSE) { diag "move_before() within submodel, upwards"; }
+diag "move_before() within submodel, upwards";
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
-  $s2->insert_with_values (2, 0=>'three');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
+  $s2->set_value ($s2->insert(2), 0=>'three');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder
@@ -731,14 +798,14 @@ if (VERBOSE) { diag "move_before() within submodel, upwards"; }
              's2 contents');
 }
 
-if (VERBOSE) { diag "move_before() within submodel, downwards"; }
+diag "move_before() within submodel, downwards";
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
-  $s2->insert_with_values (2, 0=>'three');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
+  $s2->set_value ($s2->insert(2), 0=>'three');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder
@@ -761,15 +828,19 @@ if (VERBOSE) { diag "move_before() within submodel, downwards"; }
              's2 contents');
 }
 
-if (VERBOSE) { diag "move_before() across submodel, downwards\n"; }
-{
+diag "move_before() across submodel, downwards\n";
+SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s1->insert_with_values (1, 0=>'one');
-  $s2->insert_with_values (0, 0=>'two');
-  $s2->insert_with_values (1, 0=>'three');
-  $s2->insert_with_values (2, 0=>'four');
+
+  $s1->can('insert_with_values')
+    or skip 'no insert_with_values()', 4;
+
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s1->set_value ($s1->insert(1), 0=>'one');
+  $s2->set_value ($s2->insert(0), 0=>'two');
+  $s2->set_value ($s2->insert(1), 0=>'three');
+  $s2->set_value ($s2->insert(2), 0=>'four');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder
@@ -789,13 +860,17 @@ if (VERBOSE) { diag "move_before() across submodel, downwards\n"; }
              [ 'two', 'four' ]);
 }
 
-if (VERBOSE) { diag "move_before() across submodel, downwards to start\n"; }
-{
+diag "move_before() across submodel, downwards to start\n";
+SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
+
+  $s1->can('insert_with_values')
+    or skip 'no insert_with_values()', 4;
+
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder
@@ -815,13 +890,17 @@ if (VERBOSE) { diag "move_before() across submodel, downwards to start\n"; }
              [ 'one' ]);
 }
 
-if (VERBOSE) { diag "move_before() across submodel, upwards\n"; }
-{
+diag "move_before() across submodel, upwards\n";
+SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
+
+  $s1->can('insert_with_values')
+    or skip 'no insert_with_values()', 4;
+
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder
@@ -840,13 +919,17 @@ if (VERBOSE) { diag "move_before() across submodel, upwards\n"; }
              [ 'one', 'zero', 'two' ]);
 }
 
-if (VERBOSE) { diag "move_before() across submodel, up to end\n"; }
-{
+diag "move_before() across submodel, up to end\n";
+SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
+
+  $s1->can('insert_with_values')
+    or skip 'no insert_with_values()', 4;
+
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder
@@ -872,8 +955,8 @@ if (VERBOSE) { diag "move_before() across submodel, up to end\n"; }
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   my $iter = $concat->get_iter_first;
@@ -902,8 +985,8 @@ if (VERBOSE) { diag "move_before() across submodel, up to end\n"; }
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   my $iter = $concat->iter_nth_child (undef, 1);
@@ -923,10 +1006,10 @@ if (VERBOSE) { diag "move_before() across submodel, up to end\n"; }
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s1->insert_with_values (1, 0=>'one');
-  $s2->insert_with_values (0, 0=>'two');
-  $s2->insert_with_values (1, 0=>'three');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s1->set_value ($s1->insert(1), 0=>'one');
+  $s2->set_value ($s2->insert(0), 0=>'two');
+  $s2->set_value ($s2->insert(1), 0=>'three');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   $concat->reorder (0, 2, 1, 3);
@@ -941,10 +1024,10 @@ if (VERBOSE) { diag "move_before() across submodel, up to end\n"; }
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s1->insert_with_values (1, 0=>'one');
-  $s2->insert_with_values (0, 0=>'two');
-  $s2->insert_with_values (1, 0=>'three');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s1->set_value ($s1->insert(1), 0=>'one');
+  $s2->set_value ($s2->insert(0), 0=>'two');
+  $s2->set_value ($s2->insert(1), 0=>'three');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   $concat->reorder (1, 2, 3, 0);
@@ -962,8 +1045,8 @@ if (VERBOSE) { diag "move_before() across submodel, up to end\n"; }
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   # change in submodel seen in concat
@@ -1003,8 +1086,8 @@ if (VERBOSE) { diag "move_before() across submodel, up to end\n"; }
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   # change in submodel seen in concat
@@ -1045,9 +1128,9 @@ if (VERBOSE) { diag "move_before() across submodel, up to end\n"; }
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder
@@ -1072,9 +1155,9 @@ if (VERBOSE) { diag "move_before() across submodel, up to end\n"; }
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder
@@ -1099,9 +1182,9 @@ if (VERBOSE) { diag "move_before() across submodel, up to end\n"; }
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2 ]);
 
   is_deeply (listen_reorder ($concat,
@@ -1119,9 +1202,9 @@ if (VERBOSE) { diag "move_before() across submodel, up to end\n"; }
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
-  $s1->insert_with_values (0, 0=>'zero');
-  $s2->insert_with_values (0, 0=>'one');
-  $s2->insert_with_values (1, 0=>'two');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
   my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s2, $s1, $s2 ]);
 
   is_deeply (listen_reorder ($concat,
@@ -1140,8 +1223,8 @@ if (VERBOSE) { diag "move_before() across submodel, up to end\n"; }
 
 {
   my $store = Gtk2::ListStore->new ('Glib::String');
-  $store->insert_with_values (0, 0=>'zero');
-  $store->insert_with_values (1, 0=>'one');
+  $store->set_value ($store->insert(0), 0=>'zero');
+  $store->set_value ($store->insert(1), 0=>'one');
   my $concat_inner = Gtk2::Ex::ListModelConcat->new (models=>[$store]);
   my $concat_outer = Gtk2::Ex::ListModelConcat->new (models=>[$concat_inner]);
 

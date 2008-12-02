@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Gtk2-Ex-ListModelConcat
-version:             2
+version:             3
 abstract:            Concatenate list models in Gtk2-Perl.
 license:             gpl
 author:              

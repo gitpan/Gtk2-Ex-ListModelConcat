@@ -17,6 +17,10 @@ with Gtk2-Ex-ListModelConcat.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
+Version 3, December 2008
+    - fix for iter stamp on LP64 systems
+    - allow for Gtk pre-2.6 in the tests
+
 Version 2, November 2008
     - delegate drag and drop to submodels instead of attempting row copy
 

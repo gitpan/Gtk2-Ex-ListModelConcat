@@ -23,7 +23,7 @@ use Gtk2 '1.201'; # 1.201 for drag_data_get() stack fix
 use Carp;
 use List::Util qw(min max);
 
-our $VERSION = 2;
+our $VERSION = 3;
 
 use constant DEBUG => 0;
 
@@ -41,6 +41,7 @@ use Glib::Object::Subclass
 
 sub INIT_INSTANCE {
   my ($self) = @_;
+  $self->{'stamp'} = int(rand(1<<31));
   $self->{'models'} = [];
 }
 
@@ -215,14 +216,14 @@ use constant ITER_PARENT => undef;
 
 sub _index_to_iter {
   my ($self, $index) = @_;
-  return [ $self+0, $index, undef, undef ];
+  return [ $self->{'stamp'}, $index, undef, undef ];
 }
 sub _iter_to_index {
   my ($self, $iter) = @_;
   if (! defined $iter) { return undef; }
-  if ($iter->[0] != $self+0) {
+  if ($iter->[0] != $self->{'stamp'}) {
     croak "iter is not for this ", ref($self),
-      " (stamp ", $iter->[0], " want ", $self+0, ")\n";
+      " (stamp ", $iter->[0], " want ", $self->{'stamp'}, ")";
   }
   return $iter->[1];
 }
@@ -230,7 +231,7 @@ sub _iter_to_index {
 sub _iterobj_to_index {
   my ($self, $iterobj) = @_;
   if (! defined $iterobj) { croak 'ListModelConcat: iter cannot be undef'; }
-  return _iter_to_index ($self, $iterobj->to_arrayref ($self+0));
+  return _iter_to_index ($self, $iterobj->to_arrayref ($self->{'stamp'}));
 }
 sub _index_to_iterobj {
   my ($self, $index) = @_;
@@ -534,7 +535,7 @@ sub _subiter_to_iterobj {
 
 sub iter_is_valid {
   my ($self, $iter) = @_;
-  my $a = eval { $iter->to_arrayref($self+0) };
+  my $a = eval { $iter->to_arrayref($self->{'stamp'}) };
   return ($a && $a->[1] < _total_length($self));
 }
 
@@ -784,7 +785,7 @@ sub _treemodel_extract_row {
 
 sub set_value {
   my ($self, $iterobj, $col, $val) = @_;
-  my $iter = $iterobj->to_arrayref ($self+0);
+  my $iter = $iterobj->to_arrayref ($self->{'stamp'});
   my ($model, $subiter) = _iter_to_subiter ($self, $iter);
   $model->set_value ($subiter, $col, $val);
 }
