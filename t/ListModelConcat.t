@@ -21,13 +21,24 @@
 use strict;
 use warnings;
 use Gtk2::Ex::ListModelConcat;
-use Test::More tests => 218;
+use Test::More tests => 251;
 
 use constant VERBOSE => 0;
 
-ok ($Gtk2::Ex::ListModelConcat::VERSION >= 3);
-ok (Gtk2::Ex::ListModelConcat->VERSION  >= 3);
+my $want_version = 4;
+ok ($Gtk2::Ex::ListModelConcat::VERSION >= $want_version,
+    'VERSION variable');
+ok (Gtk2::Ex::ListModelConcat->VERSION  >= $want_version,
+    'VERSION class method');
+Gtk2::Ex::ListModelConcat->VERSION ($want_version);
+{
+  my $concat = Gtk2::Ex::ListModelConcat->new;
+  ok ($concat->VERSION >= $want_version,
+      'VERSION object method');
+  $concat->VERSION ($want_version);
+}
 
+require Gtk2;
 diag ("Perl-Gtk2 version ",Gtk2->VERSION);
 diag ("Perl-Glib version ",Glib->VERSION);
 diag ("Compiled against Glib version ",
@@ -49,14 +60,18 @@ diag ("Running on       Gtk version ",
 
 # pretend insert_with_values() not available, as pre-Gtk 2.6
 #
-if (0 || $ENV{'MY_DEVELOPMENT_HACK_NO_INSERT_WITH_VALUES'}) {
+if ($ENV{'MY_DEVELOPMENT_HACK_NO_INSERT_WITH_VALUES'}) {
+  diag "Applying MY_DEVELOPMENT_HACK_NO_INSERT_WITH_VALUES";
+
   Gtk2::ListStore->can('insert_with_values'); # force autoload
-  diag "can insert_with_values: ",
+  diag " can('insert_with_values'): ",
     Gtk2::ListStore->can('insert_with_values')||'no',"\n";
 
-  undef *Gtk2::ListStore::insert_with_values;
+  { no warnings 'once';
+    undef *Gtk2::ListStore::insert_with_values;
+  }
 
-  diag "can insert_with_values: ",
+  diag " can('insert_with_values'): ",
     Gtk2::ListStore->can('insert_with_values')||'no',"\n";
   die if Gtk2::ListStore->can('insert_with_values');
 }
@@ -269,10 +284,106 @@ sub listen_reorder {
 
 }
 
+#------------------------------------------------------------------------------
+# Test::Weaken
+
+SKIP: {
+  eval { require Test::Weaken }
+    or skip "Test::Weaken not available: $@", 3;
+
+  {
+    my @weaken = Test::Weaken::poof(sub {
+                                      [ Gtk2::Ex::ListModelConcat->new ]
+                                    });
+    is ($weaken[0], 0, 'Test::Weaken deep garbage collection');
+    require Data::Dumper;
+    # show how many sub-objects examined, and what if anything was left over
+    diag (Data::Dumper->Dump([\@weaken],['Test-Weaken']));
+  }
+
+  is (Test::Weaken::poof(sub {
+                           my $store = Gtk2::ListStore->new ('Glib::String');
+                           my $concat = Gtk2::Ex::ListModelConcat->new
+                             (models => [ $store ]);
+                           [ $concat, $store ]
+                         }),
+      0, 'Test::Weaken with one sub-model');
+
+  is (Test::Weaken::poof(sub {
+                           my $s1 = Gtk2::ListStore->new ('Glib::String');
+                           my $s2 = Gtk2::ListStore->new ('Glib::String');
+                           my $concat = Gtk2::Ex::ListModelConcat->new
+                             (models => [ $s1, $s2 ]);
+                           [ $concat, $s1, $s2 ]
+                         }),
+      0, 'Test::Weaken with two sub-models');
+}
+
+
+#------------------------------------------------------------------------------
+# child_iter_to_iter
+
+sub path_indices {
+  my ($path) = @_;
+  if ($path->isa('Gtk2::TreePath')) {
+    return [$path->get_indices];
+  } else {
+    return $path;
+  }
+}
+sub iter_indices {
+  my ($model, $iter) = @_;
+  if ($iter->isa('Gtk2::TreeIter')) {
+    return path_indices ($model->get_path ($iter));
+  } else {
+    return $iter;
+  }
+}
+
+{
+  my $s1 = Gtk2::ListStore->new ('Glib::String');
+  my $s2 = Gtk2::ListStore->new ('Glib::String');
+  $s1->set_value ($s1->insert(0), 0=>'zero');
+  $s2->set_value ($s2->insert(0), 0=>'one');
+  $s2->set_value ($s2->insert(1), 0=>'two');
+  my $concat = Gtk2::Ex::ListModelConcat->new (models => [ $s1, $s2, $s2 ]);
+
+  my $subiter = $s2->iter_nth_child (undef, 1);
+  my $iter = $concat->convert_child_iter_to_iter ($s2, $subiter);
+  isa_ok ($iter, 'Gtk2::TreeIter');
+  is_deeply (iter_indices($concat,$iter), [2],
+             'convert_child_iter_to_iter');
+
+  $iter = $concat->convert_childnum_iter_to_iter (1, $subiter);
+  isa_ok ($iter, 'Gtk2::TreeIter');
+  is_deeply (iter_indices($concat,$iter), [2],
+             'convert_childnum_iter_to_iter');
+
+  $iter = $concat->iter_nth_child (undef, 4);
+  (my $model, $subiter) = $concat->convert_iter_to_child_iter ($iter);
+  is ($model, $s2,
+      'convert_iter_to_child_iter - model');
+  isa_ok ($subiter, 'Gtk2::TreeIter');
+  is_deeply (iter_indices($s2,$subiter), [1],
+             'convert_iter_to_child_iter - path');
+
+  my ($childmodel, $childnum);
+  ($childmodel, $subiter, $childnum)
+    = $concat->convert_iter_to_child_iter ($iter);
+  is ($childmodel, $model);
+  is ($childnum, 2,
+      'convert_iter_to_child_iter - model');
+  isa_ok ($subiter, 'Gtk2::TreeIter');
+  is_deeply (iter_indices($s2,$subiter), [1],
+             'convert_iter_to_childnum_iter - path');
+
+}
+
 
 #------------------------------------------------------------------------------
 # append
 
+diag "append";
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
@@ -952,6 +1063,7 @@ SKIP: {
 #------------------------------------------------------------------------------
 # remove
 
+diag ('remove');
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
@@ -1000,9 +1112,54 @@ SKIP: {
              [ ]);
 }
 
+{
+  my $store = Gtk2::ListStore->new ('Glib::String');
+  $store->set_value ($store->insert(0), 0=>'zero');
+  $store->set_value ($store->insert(1), 0=>'one');
+  my $concat = Gtk2::Ex::ListModelConcat->new
+    (models => [ $store, $store, $store ]);
+
+  my $iter = $concat->iter_nth_child (undef, 4); # second last
+  ok ($concat->remove ($iter));
+  ok ($concat->iter_is_valid ($iter));
+  is_deeply ([$concat->get_path($iter)->get_indices], [ 2 ]);
+  is_deeply (listmodel_contents($store),
+             [ 'one' ]);
+  is_deeply (listmodel_contents($concat),
+             [ 'one', 'one', 'one' ]);
+
+  ok (! $concat->remove ($iter));
+  ok (! $concat->iter_is_valid ($iter));
+  is_deeply (listmodel_contents($store), [ ]);
+  is_deeply (listmodel_contents($concat), [ ]);
+}
+
+{
+  my $store = Gtk2::ListStore->new ('Glib::String');
+  $store->set_value ($store->insert(0), 0=>'zero');
+  $store->set_value ($store->insert(1), 0=>'one');
+  my $concat = Gtk2::Ex::ListModelConcat->new
+    (models => [ $store, $store, $store ]);
+
+  my $iter = $concat->iter_nth_child (undef, 0);
+  ok ($concat->remove ($iter));
+  ok ($concat->iter_is_valid ($iter));
+  is_deeply ([$concat->get_path($iter)->get_indices], [ 0 ]);
+  is_deeply (listmodel_contents($store),
+             [ 'one' ]);
+  is_deeply (listmodel_contents($concat),
+             [ 'one', 'one', 'one' ]);
+
+  ok (! $concat->remove ($iter));
+  ok (! $concat->iter_is_valid ($iter));
+  is_deeply (listmodel_contents($store), [ ]);
+  is_deeply (listmodel_contents($concat), [ ]);
+}
+
 #------------------------------------------------------------------------------
 # reorder
 
+diag ('reorder');
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');

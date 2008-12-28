@@ -25,6 +25,4 @@ the Concat model, if the sub-models are editable.
 The prerequisites are Gtk2-Perl and my Glib-Ex-ObjectBits.  The
 ListModelConcat home page is
 
-    http://www.geocities.com/user42_kevin/gtk2-ex-listmodelconcat/index.html
-
-Bug reports to the author at user42@zip.com.au please.
+http://www.geocities.com/user42_kevin/gtk2-ex-listmodelconcat/index.html

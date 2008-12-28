@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Gtk2-Ex-ListModelConcat
-version:             3
+version:             4
 abstract:            Concatenate list models in Gtk2-Perl.
 license:             gpl
 author:              
@@ -10,13 +10,15 @@ distribution_type:   module
 requires:     
     Glib::Ex::SignalIds:           0
     Gtk2:                          1.201
-    List::Util:                    0
-    Scalar::Util:                  0
 meta-spec:
     url:     http://module-build.sourceforge.net/META-spec-v1.3.html
     version: 1.3
+recommends:
+    Test::Pod: 1.00
+    Test::Weaken: 0
 no_index:
     directory:
         - devel
 resources:
     homepage: http://www.geocities.com/user42_kevin/gtk2-ex-listmodelconcat/index.html
+    license: http://www.gnu.org/licenses/#GPL
