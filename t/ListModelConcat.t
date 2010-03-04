@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Copyright 2008 Kevin Ryde
+# Copyright 2008, 2009, 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-ListModelConcat.
 #
@@ -17,46 +17,36 @@
 # You should have received a copy of the GNU General Public License along
 # with Gtk2-Ex-ListModelConcat.  If not, see <http://www.gnu.org/licenses/>.
 
-
+use 5.008;
 use strict;
 use warnings;
 use Gtk2::Ex::ListModelConcat;
-use Test::More tests => 251;
+use Test::More tests => 249;
+
+use FindBin;
+use File::Spec;
+use lib File::Spec->catdir($FindBin::Bin,'inc');
+use MyTestHelpers;
+
+SKIP: { eval 'use Test::NoWarnings; 1'
+          or skip 'Test::NoWarnings not available', 1; }
 
 use constant VERBOSE => 0;
 
-my $want_version = 4;
-ok ($Gtk2::Ex::ListModelConcat::VERSION >= $want_version,
-    'VERSION variable');
-ok (Gtk2::Ex::ListModelConcat->VERSION  >= $want_version,
-    'VERSION class method');
+my $want_version = 5;
+cmp_ok ($Gtk2::Ex::ListModelConcat::VERSION, '>=', $want_version,
+        'VERSION variable');
+cmp_ok (Gtk2::Ex::ListModelConcat->VERSION,  '>=', $want_version,
+        'VERSION class method');
 Gtk2::Ex::ListModelConcat->VERSION ($want_version);
 {
   my $concat = Gtk2::Ex::ListModelConcat->new;
-  ok ($concat->VERSION >= $want_version,
-      'VERSION object method');
+  cmp_ok ($concat->VERSION, '>=', $want_version, 'VERSION object method');
   $concat->VERSION ($want_version);
 }
 
 require Gtk2;
-diag ("Perl-Gtk2 version ",Gtk2->VERSION);
-diag ("Perl-Glib version ",Glib->VERSION);
-diag ("Compiled against Glib version ",
-      Glib::MAJOR_VERSION(), ".",
-      Glib::MINOR_VERSION(), ".",
-      Glib::MICRO_VERSION(), ".");
-diag ("Running on       Glib version ",
-      Glib::major_version(), ".",
-      Glib::minor_version(), ".",
-      Glib::micro_version(), ".");
-diag ("Compiled against Gtk version ",
-      Gtk2::MAJOR_VERSION(), ".",
-      Gtk2::MINOR_VERSION(), ".",
-      Gtk2::MICRO_VERSION(), ".");
-diag ("Running on       Gtk version ",
-      Gtk2::major_version(), ".",
-      Gtk2::minor_version(), ".",
-      Gtk2::micro_version(), ".");
+MyTestHelpers::glib_gtk_versions();
 
 # pretend insert_with_values() not available, as pre-Gtk 2.6
 #
@@ -101,7 +91,7 @@ sub listen_changed {
   my $id = $model->signal_connect
     (row_changed => sub {
        my ($model, $path, $iter) = @_;
-       if (VERBOSE) { diag "listen_changed() signal received\n"; }
+       if (VERBOSE) { diag "listen_changed() signal received"; }
        $ret->{'count'}++;
        $ret->{'path'} = [ $path->get_indices ];
        $ret->{'iter'} = $iter && [ $model->get_path($iter)->get_indices ];
@@ -118,7 +108,7 @@ sub listen_inserted {
   my $id = $model->signal_connect
     (row_inserted => sub {
        my ($model, $path, $iter) = @_;
-       if (VERBOSE) { diag "listen_inserted() signal received\n"; }
+       if (VERBOSE) { diag "listen_inserted() signal received"; }
        $ret->{'count'}++;
        $ret->{'path'} = [ $path->get_indices ];
        $ret->{'iter'} = $iter && [ $model->get_path($iter)->get_indices ];
@@ -135,7 +125,7 @@ sub listen_reorder {
   my $id = $model->signal_connect
     (rows_reordered => sub {
        my ($model, $path, $iter, $aref) = @_;
-       if (VERBOSE) { diag "listen_reorder() signal received\n"; }
+       if (VERBOSE) { diag "listen_reorder() signal received"; }
        $ret->{'count'}++;
 
        # buggy in gtk2-perl 1.183
@@ -144,7 +134,7 @@ sub listen_reorder {
        $ret->{'path'} = [ $path->get_indices ];
        $ret->{'iter'} = $iter && [ $model->get_path($iter)->get_indices ];
        $ret->{'order'} = $aref;
-       if (VERBOSE) { diag "  order ",join(' ',@$aref),"\n"; }
+       if (VERBOSE) { diag "  order ",join(' ',@$aref); }
      });
   &$subr();
   $model->signal_handler_disconnect ($id);
@@ -283,42 +273,6 @@ sub listen_reorder {
   is ($iter, undef);
 
 }
-
-#------------------------------------------------------------------------------
-# Test::Weaken
-
-SKIP: {
-  eval { require Test::Weaken }
-    or skip "Test::Weaken not available: $@", 3;
-
-  {
-    my @weaken = Test::Weaken::poof(sub {
-                                      [ Gtk2::Ex::ListModelConcat->new ]
-                                    });
-    is ($weaken[0], 0, 'Test::Weaken deep garbage collection');
-    require Data::Dumper;
-    # show how many sub-objects examined, and what if anything was left over
-    diag (Data::Dumper->Dump([\@weaken],['Test-Weaken']));
-  }
-
-  is (Test::Weaken::poof(sub {
-                           my $store = Gtk2::ListStore->new ('Glib::String');
-                           my $concat = Gtk2::Ex::ListModelConcat->new
-                             (models => [ $store ]);
-                           [ $concat, $store ]
-                         }),
-      0, 'Test::Weaken with one sub-model');
-
-  is (Test::Weaken::poof(sub {
-                           my $s1 = Gtk2::ListStore->new ('Glib::String');
-                           my $s2 = Gtk2::ListStore->new ('Glib::String');
-                           my $concat = Gtk2::Ex::ListModelConcat->new
-                             (models => [ $s1, $s2 ]);
-                           [ $concat, $s1, $s2 ]
-                         }),
-      0, 'Test::Weaken with two sub-models');
-}
-
 
 #------------------------------------------------------------------------------
 # child_iter_to_iter
@@ -730,13 +684,13 @@ diag "move_after() within submodel, downwards";
              's2 contents');
 }
 
-diag "move_after() across submodel, downwards\n";
+diag "move_after() across submodel, downwards";
 SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
 
   $s1->can('insert_with_values')
-    or skip 'no insert_with_values()', 4;
+    or skip 'no insert_with_values() for move_after()', 4;
 
   $s1->set_value ($s1->insert(0), 0=>'zero');
   $s2->set_value ($s2->insert(0), 0=>'one');
@@ -759,13 +713,13 @@ SKIP: {
              [ 'one' ]);
 }
 
-diag "move_after() across submodel, upwards\n";
+diag "move_after() across submodel, upwards";
 SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
 
   $s1->can('insert_with_values')
-    or skip 'no insert_with_values()', 4;
+    or skip 'no insert_with_values() for move_after()', 4;
 
   $s1->set_value ($s1->insert(0), 0=>'zero');
   $s2->set_value ($s2->insert(0), 0=>'one');
@@ -790,13 +744,13 @@ SKIP: {
              [ 'one', 'two', 'zero', 'three' ]);
 }
 
-diag "move_after() across submodel, upwards to end\n";
+diag "move_after() across submodel, upwards to end";
 SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
 
   $s1->can('insert_with_values')
-    or skip 'no insert_with_values()', 4;
+    or skip 'no insert_with_values() for move_after()', 4;
 
   $s1->set_value ($s1->insert(0), 0=>'zero');
   $s2->set_value ($s2->insert(0), 0=>'one');
@@ -820,13 +774,13 @@ SKIP: {
              [ 'one', 'two', 'zero' ]);
 }
 
-diag "move_after() across submodel, down to start\n";
+diag "move_after() across submodel, down to start";
 SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
 
   $s1->can('insert_with_values')
-    or skip 'no insert_with_values()', 4;
+    or skip 'no insert_with_values() for move_after()', 4;
 
   $s1->set_value ($s1->insert(0), 0=>'zero');
   $s2->set_value ($s2->insert(0), 0=>'one');
@@ -939,13 +893,13 @@ diag "move_before() within submodel, downwards";
              's2 contents');
 }
 
-diag "move_before() across submodel, downwards\n";
+diag "move_before() across submodel, downwards";
 SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
 
   $s1->can('insert_with_values')
-    or skip 'no insert_with_values()', 4;
+    or skip 'no insert_with_values() for move_before()', 4;
 
   $s1->set_value ($s1->insert(0), 0=>'zero');
   $s1->set_value ($s1->insert(1), 0=>'one');
@@ -971,13 +925,13 @@ SKIP: {
              [ 'two', 'four' ]);
 }
 
-diag "move_before() across submodel, downwards to start\n";
+diag "move_before() across submodel, downwards to start";
 SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
 
   $s1->can('insert_with_values')
-    or skip 'no insert_with_values()', 4;
+    or skip 'no insert_with_values() for move_before()', 4;
 
   $s1->set_value ($s1->insert(0), 0=>'zero');
   $s2->set_value ($s2->insert(0), 0=>'one');
@@ -1001,13 +955,13 @@ SKIP: {
              [ 'one' ]);
 }
 
-diag "move_before() across submodel, upwards\n";
+diag "move_before() across submodel, upwards";
 SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
 
   $s1->can('insert_with_values')
-    or skip 'no insert_with_values()', 4;
+    or skip 'no insert_with_values() for move_before()', 4;
 
   $s1->set_value ($s1->insert(0), 0=>'zero');
   $s2->set_value ($s2->insert(0), 0=>'one');
@@ -1030,13 +984,13 @@ SKIP: {
              [ 'one', 'zero', 'two' ]);
 }
 
-diag "move_before() across submodel, up to end\n";
+diag "move_before() across submodel, up to end";
 SKIP: {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
 
   $s1->can('insert_with_values')
-    or skip 'no insert_with_values()', 4;
+    or skip 'no insert_with_values() for move_before()', 4;
 
   $s1->set_value ($s1->insert(0), 0=>'zero');
   $s2->set_value ($s2->insert(0), 0=>'one');

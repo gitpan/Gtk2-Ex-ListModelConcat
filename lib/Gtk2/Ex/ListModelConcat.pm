@@ -1,4 +1,4 @@
-# Copyright 2008 Kevin Ryde
+# Copyright 2008, 2009, 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-ListModelConcat.
 #
@@ -17,14 +17,15 @@
 
 
 package Gtk2::Ex::ListModelConcat;
+use 5.008;
 use strict;
 use warnings;
 # 1.201 for drag_data_get() stack fix, and multi-column $model->get() fix
-use Gtk2 '1.201';
+use Gtk2 1.201;
 use Carp;
 use List::Util qw(min max);
 
-our $VERSION = 4;
+our $VERSION = 5;
 
 use constant DEBUG => 0;
 
@@ -670,7 +671,7 @@ sub move_before {
 sub _need_method {
   my ($model, $name) = @_;
   return ($model->can($name)
-          || croak "ListModelConcat: submodel doesn\'t support '$name'");
+          || croak "ListModelConcat: submodel doesn't support '$name'");
 }
 
 # gtk_list_store_remove
@@ -921,9 +922,13 @@ sub _index_to_subindex_post {
 1;
 __END__
 
+=for stopwords TreeModels Concat eg ListStores ListModelConcat TreeDragSource TreeDragDest submodels submodel ie Arrayref Eg ListStore Gtk Iter iters versa TreeModelFilter iter arrayref func TreeModel TreeModelFilters Ryde
+
 =head1 NAME
 
 Gtk2::Ex::ListModelConcat -- concatenated list models
+
+=for test_synopsis my ($m1, $m2);
 
 =head1 SYNOPSIS
 
@@ -1171,11 +1176,11 @@ L<Gtk2::ListStore>, L<Glib::Object>
 
 =head1 HOME PAGE
 
-L<http://www.geocities.com/user42_kevin/gtk2-ex-listmodelconcat/>
+L<http://user42.tuxfamily.org/gtk2-ex-listmodelconcat/>
 
 =head1 COPYRIGHT
 
-Copyright 2008 Kevin Ryde
+Copyright 2008, 2009, 2010 Kevin Ryde
 
 Gtk2-Ex-ListModelConcat is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License as published by
