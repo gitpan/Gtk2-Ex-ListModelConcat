@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Copyright 2008, 2009 Kevin Ryde
+# Copyright 2008, 2009, 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-ListModelConcat.
 #
@@ -23,9 +23,11 @@ use warnings;
 use Gtk2::Ex::ListModelConcat;
 use Test::More;
 
-my $have_test_weaken = eval "use Test::Weaken 2.000; 1";
+my $have_test_weaken = eval "use Test::Weaken 2.000;
+                             use Test::Weaken::Gtk2;
+                             1";
 if (! $have_test_weaken) {
-  plan skip_all => "due to Test::Weaken 2.000 not available -- $@";
+  plan skip_all => "due to Test::Weaken 2.000 and/or Test::Weaken::Gtk2 not available -- $@";
 }
 plan tests => 3;
 

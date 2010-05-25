@@ -1,5 +1,5 @@
 This file contains message digests of all files listed in MANIFEST,
-signed via the Module::Signature module, version 0.61.
+signed via the Module::Signature module, version 0.63.
 
 To verify the content in this distribution, first make sure you have
 Module::Signature installed, then type:
@@ -15,35 +15,39 @@ not run its Makefile.PL or Build.PL.
 Hash: SHA1
 
 SHA1 842745cb706f8f2126506f544492f7a80dbe29b3 COPYING
-SHA1 b18fe59a5f56f4d63c349b39b6d1e210c694e22c Changes
-SHA1 f35ffce596d5b0aaef99542bafe1f9dd8754f52c MANIFEST
-SHA1 a5702ed4c66c943b47354756b340812302d15e6f MANIFEST.SKIP
-SHA1 f01c88028335a2373a1ab282d26d44873f3ed48b META.yml
-SHA1 d75accff4f1e32fef9bd53313aa73cb71df4b554 Makefile.PL
+SHA1 450336f59a12a88b00ccf9ae144922ea723f097b Changes
+SHA1 cb69e90ae5338a78c98faebcf8bb6412fb3c7d45 MANIFEST
+SHA1 00e97fa7664a1ea29a3be5b0b2ec2b0076e002f1 MANIFEST.SKIP
+SHA1 d1b8a81d0d4632e97014f6fa2396d9a99d4d9661 META.yml
+SHA1 628a8c14d4df2c32a27cda072d3b7f13a6ccdc72 Makefile.PL
 SHA1 91abf139acd8d10cd1d7c7472210f06ff903a0f2 README
-SHA1 c7a9ff6d6d1227df4e63d1974c8ce55e2186be1f debian/changelog
+SHA1 d0e8620a46bb5156f1323ab458fd575bcdbb4eb0 debian/changelog
 SHA1 ac3478d69a3c81fa62e60f5c3696165a4e5e6ac4 debian/compat
-SHA1 1306a09c6ea377de99983d12a6622ab00d21583b debian/control
+SHA1 e9353fff514d64898d630df1beab229518b08bdc debian/control
 SHA1 5b869c7b089726e76e8af61ce74590b6dec2cd10 debian/copyright
 SHA1 1c1906eb0d8274488769c68d1d21798377ffbb65 debian/rules
+SHA1 61652cd1568dcf2614df833eba241755eee34e89 debian/source/format
 SHA1 fe0ba7fe4e3892a9790fad5325e1577816362eff debian/watch
+SHA1 d126be6e3a33ee87b5be6fedf3688f4aef0cf493 devel/TestWithoutGtk2Things.pm
+SHA1 105faf64f06077dd5a982cde02cfa552177f276a devel/reorder.pl
 SHA1 b3c9df91a25b0d470fc5db8fc40fce8e4a844cae devel/run.pl
-SHA1 aa4f2e4e4529921eeab0a207ea9c72ae64d405ab examples/demo.pl
-SHA1 01d4cc4ab437cf78c53084d7f1b1f3ff0b768a2a inc/MyMakeMakerExtras.pm
+SHA1 30f793b66551801abbc6a108ce34dee8337f6b92 examples/demo.pl
+SHA1 f0016bb5fbe1ba38245f6264210252af0583fa0e inc/MyMakeMakerExtras.pm
 SHA1 63427b66eb26f013f10c835b0cf320c93361f310 inc/my_pod2html
-SHA1 b807a661a9c0e370ad6776291f9eac122205daef lib/Gtk2/Ex/ListModelConcat.pm
-SHA1 11eda0347af48309996833a4da214197e31b85fb t/0-META-read.t
-SHA1 a343ed4dce96d05de51eed1ec065911584b96fce t/0-Test-DistManifest.t
-SHA1 bba0dc087cbe64d8f100ab77e6cef061c0bebf27 t/0-Test-Pod.t
-SHA1 5fa94e1e88e44064d1e6b21c88a4c9374a17bfd1 t/0-Test-Synopsis.t
-SHA1 9a19fa262c1cc6ee6afe638600ce880500a91946 t/0-Test-YAML-Meta.t
-SHA1 7a57a9e14d6511f98091c60869aec443a963f0cb t/ListModelConcat.t
-SHA1 e5b9059d5e27d380fc9418095d773ad5f96baa06 t/inc/MyTestHelpers.pm
-SHA1 79e47d16f76b02dbe6ec7a9db2a4cca75305f1d2 t/test-weaken.t
+SHA1 4947b5014b7523df1161c761f6b17d795a34d8d2 lib/Gtk2/Ex/ListModelConcat.pm
+SHA1 d5d5c83c83918d8c97ca79e92ea840cdf277f01f t/0-META-read.t
+SHA1 37abd43b41068804ea4bb099fdd89af21be82926 t/0-Test-DistManifest.t
+SHA1 8f93fb4c8f0424a4442cc93c9a2e86342ef55281 t/0-Test-Pod.t
+SHA1 1de8f07883f6bf1a2ef79f2cb8adf1deb3f61cee t/0-Test-Synopsis.t
+SHA1 fb517c2fae5ddac559318bf6a224949115ea3129 t/0-Test-YAML-Meta.t
+SHA1 ca185a703059227e1ffd5e8fa647b36cc3156f15 t/ListModelConcat.t
+SHA1 e5b9059d5e27d380fc9418095d773ad5f96baa06 t/MyTestHelpers.pm
+SHA1 818806ac6db2ee986e955696c9ae775b77ed6b9a t/overload.t
+SHA1 37b5a801758ad72c191ef1c77b8b3c4c7d528afb t/test-weaken.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.10 (GNU/Linux)
 
-iD8DBQFLkCpCLFMCIV9q3ToRAlLWAJ485OBw9/toj0i5sakxF35xV0NE4gCdGk9d
-yLMZopSiFxYe/xa5Ci0lUHk=
-=MlOl
+iD8DBQFL+IgtLFMCIV9q3ToRAqh0AKCyArWPwQEWhiICqkCNuYDDB8gUZgCeMV+k
+0shbOm4Z9sctGmfbVsrw4NM=
+=Tp2p
 -----END PGP SIGNATURE-----

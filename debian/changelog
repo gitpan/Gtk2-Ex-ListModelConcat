@@ -1,5 +1,5 @@
-libgtk2-ex-listmodelconcat-perl (5-1) unstable; urgency=low
+libgtk2-ex-listmodelconcat-perl (7-1) unstable; urgency=low
 
   * Packaged version.
 
- -- Kevin Ryde <user42@zip.com.au>  Fri, 05 Mar 2010 07:49:20 +1100
+ -- Kevin Ryde <user42@zip.com.au>  Sun, 23 May 2010 11:29:56 +1000

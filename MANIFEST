@@ -5,8 +5,11 @@ debian/compat
 debian/control
 debian/copyright
 debian/rules
+debian/source/format
 debian/watch
+devel/reorder.pl
 devel/run.pl
+devel/TestWithoutGtk2Things.pm
 examples/demo.pl
 inc/my_pod2html
 inc/MyMakeMakerExtras.pm
@@ -21,7 +24,8 @@ t/0-Test-DistManifest.t
 t/0-Test-Pod.t
 t/0-Test-Synopsis.t
 t/0-Test-YAML-Meta.t
-t/inc/MyTestHelpers.pm
 t/ListModelConcat.t
+t/MyTestHelpers.pm
+t/overload.t
 t/test-weaken.t
 META.yml                                 Module meta-data (added by MakeMaker)

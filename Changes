@@ -17,6 +17,12 @@ with Gtk2-Ex-ListModelConcat.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
+Version 7, April 2010
+    - use refaddr() just in case a model overloads numizing
+
+Version 6, April 2010
+    - use Gtk2::Ex::TreeModel::ImplBits
+
 Version 5, February 2010
     - new home page
 

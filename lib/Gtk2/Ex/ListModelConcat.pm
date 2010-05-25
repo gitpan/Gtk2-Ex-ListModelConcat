@@ -24,13 +24,16 @@ use warnings;
 use Gtk2 1.201;
 use Carp;
 use List::Util qw(min max);
+use Scalar::Util 1.18; # 1.18 for pure-perl refaddr() fix
+use Gtk2::Ex::TreeModel::ImplBits;
 
-our $VERSION = 5;
+# uncomment this to run the ### lines
+#use Smart::Comments;
 
-use constant DEBUG => 0;
+our $VERSION = 7;
 
 use Glib::Object::Subclass
-  Glib::Object::,
+  'Glib::Object',
   interfaces => [ 'Gtk2::TreeModel',
                   'Gtk2::TreeDragSource',
                   'Gtk2::TreeDragDest' ],
@@ -43,14 +46,14 @@ use Glib::Object::Subclass
 
 sub INIT_INSTANCE {
   my ($self) = @_;
-  $self->{'stamp'} = int(rand(1<<31)) || 1;  # ensure non-zero
+  Gtk2::Ex::TreeModel::ImplBits::random_stamp ($self);
   $self->{'models'} = [];
 }
 
 sub SET_PROPERTY {
   my ($self, $pspec, $newval) = @_;
   my $pname = $pspec->get_name;
-  if (DEBUG) { print "ListModelConcat set '$pname'\n"; }
+  ### ListModelConcat SET_PROPERTY: $pname
 
   if ($pname eq 'models') {
     foreach my $model (@$newval) {
@@ -60,7 +63,6 @@ sub SET_PROPERTY {
     @$models = @$newval;  # copy input
 
     require Glib::Ex::SignalIds;
-    require Scalar::Util;
     my @signals;
     $self->{'signals'} = \@signals;
     my %done_reordered;
@@ -75,7 +77,7 @@ sub SET_PROPERTY {
       # the reordered signal is only connected once if the model appears
       # multiple times
       my @reordered;
-      $done_reordered{$model+0} ||= do {
+      $done_reordered{Scalar::Util::refaddr($model)} ||= do {
         push @reordered, $model->signal_connect
           (rows_reordered => \&_do_rows_reordered, $userdata);
         1;
@@ -101,7 +103,7 @@ use constant GET_FLAGS => [ 'list-only' ];
 #
 sub GET_N_COLUMNS {
   my ($self) = @_;
-  if (DEBUG) { print "ListModelConcat get_n_columns\n"; }
+  ### ListModelConcat get_n_columns
   my $model = $self->{'models'}->[0]
     || return 0; # when no models
   return $model->get_n_columns;
@@ -111,7 +113,7 @@ sub GET_N_COLUMNS {
 #
 sub GET_COLUMN_TYPE {
   my ($self, $col) = @_;
-  if (DEBUG >= 2) { print "ListModelConcat get_column_type\n"; }
+  #### ListModelConcat get_column_type
   my $model = $self->{'models'}->[0] or _no_submodels('get_column_type');
   return $model->get_column_type ($col);
 }
@@ -120,8 +122,7 @@ sub GET_COLUMN_TYPE {
 #
 sub GET_ITER {
   my ($self, $path) = @_;
-  if (DEBUG >= 2) { print "ListModelConcat get_iter, path='",
-                      $path->to_string,"'\n"; }
+  #### ListModelConcat get_iter, path: $path->to_string
   if ($path->get_depth != 1) { return undef; }
   my ($index) = $path->get_indices;
   if ($index >= _total_length($self)) { return undef; }
@@ -132,7 +133,7 @@ sub GET_ITER {
 #
 sub GET_PATH {
   my ($self, $iter) = @_;
-  if (DEBUG >= 2) { print "ListModelConcat get_path\n"; }
+  #### ListModelConcat get_path
   return Gtk2::TreePath->new_from_indices (_iter_to_index ($self, $iter));
 }
 
@@ -140,8 +141,8 @@ sub GET_PATH {
 #
 sub GET_VALUE {
   my ($self, $iter, $col) = @_;
-  if (DEBUG >= 2) { print "ListModelConcat get_value iter=",
-                      $iter->[0],",",$iter->[1], " col=$col\n"; }
+  #### ListModelConcat get_value iter: $iter->[0],$iter->[1]
+  #### col: $col
   my $index = _iter_to_index ($self, $iter);
   my ($model, $subiter) = _index_to_subiter ($self, $index);
   return $model->get_value ($subiter, $col);
@@ -151,7 +152,7 @@ sub GET_VALUE {
 #
 sub ITER_NEXT {
   my ($self, $iter) = @_;
-  if (DEBUG >= 2) { print "ListModelConcat iter_next\n"; }
+  #### ListModelConcat iter_next
   my $index = _iter_to_index ($self, $iter);
   $index++;
   if ($index < _total_length($self)) {
@@ -172,7 +173,7 @@ use constant ITER_HAS_CHILD => 0;
 #
 sub ITER_N_CHILDREN {
   my ($self, $iter) = @_;
-  if (DEBUG) { print "ListModelConcat iter_n_children\n"; }
+  ### ListModelConcat iter_n_children
   if (defined $iter) {
     return 0;  # nothing under rows
   } else {
@@ -184,7 +185,7 @@ sub ITER_N_CHILDREN {
 #
 sub ITER_CHILDREN {
   # my ($self, $iter) = @_;
-  if (DEBUG) { print "ListModelConcat iter_children\n"; }
+  ### ListModelConcat iter_children
   push @_, 0;
   goto &ITER_NTH_CHILD;
 }
@@ -193,7 +194,7 @@ sub ITER_CHILDREN {
 #
 sub ITER_NTH_CHILD {
   my ($self, $iter, $n) = @_;
-  if (DEBUG) { print "ListModelConcat iter_nth_child $n\n"; }
+  ### ListModelConcat iter_nth_child: $n
   if (defined $iter) {
     return undef;
   }
@@ -349,7 +350,7 @@ sub _no_submodels {
 #
 sub _do_row_changed {
   my ($model, $subpath, $subiter, $userdata) = @_;
-  if (DEBUG) { print "ListModelConcat row_changed handler\n";}
+  ### ListModelConcat row_changed handler
   my ($self, $mnum)= @$userdata;
   if (! $self) { return; }
   if ($self->{'suppress_signals'}) { return; }
@@ -369,7 +370,7 @@ sub _do_row_changed {
 #
 sub _do_row_inserted {
   my ($model, $subpath, $subiter, $userdata) = @_;
-  if (DEBUG) { print "ListModelConcat row_inserted handler\n";}
+  ### ListModelConcat row_inserted handler
   my ($self, $mnum) = @$userdata;
   if (! $self) { return; }
   if ($self->{'suppress_signals'}) { return; }
@@ -396,7 +397,7 @@ sub _do_row_inserted {
 sub _do_row_deleted {
   my ($model, $subpath, $userdata) = @_;
   my ($self, $mnum) = @$userdata;
-  if (DEBUG) { print "ListModelConcat row_deleted handler\n";}
+  ### ListModelConcat row_deleted handler
   if (! $self) { return; }
   if ($self->{'suppress_signals'}) { return; }
   if ($subpath->get_depth != 1) { return; }  # ignore non-toplevel
@@ -421,7 +422,7 @@ sub _do_rows_reordered {
   my ($model, $path, $iter, $subaref, $userdata) = @_;
   my ($self, $mnum) = @$userdata;
   if (! $self) { return; }
-  if (DEBUG) { print "ListModelConcat rows_reordered handler\n";}
+  ### ListModelConcat rows_reordered handler
   if ($self->{'suppress_signals'}) { return; }
   if ($path->get_depth != 0) { return; } # ignore non-toplevel
 
@@ -476,7 +477,7 @@ sub clear {
     $model->clear;
   }
   # new stamp to invalidate all existing iters like GtkListStore does
-  $self->{'stamp'} = int(rand(1<<31)) || 1;  # ensure non-zero
+  Gtk2::Ex::TreeModel::ImplBits::random_stamp ($self);
 }
 
 sub set_column_types {
@@ -743,38 +744,12 @@ sub reorder {
     foreach my $newpos (0 .. $#neworder) {
       my $oldpos = $neworder[$newpos];
       if ($oldpos != $newpos) {
-        my $data = $row[$oldpos];
         my ($model, $subiter) = _index_to_subiter ($self, $newpos);
-        $model->set ($subiter, @$data);
+        $model->set ($subiter, @{$row[$oldpos]});
       }
     }
   }
   $self->rows_reordered (Gtk2::TreePath->new, undef, @neworder);
-
-
-  # If there's cycles wholely within a single sub-model then they can be
-  # applied with the submodel's reorder method, if it's got one.  The
-  # advantage would be that small swaps or shuffles can be delegated,
-  # instead of a lot of data copying.
-  #
-  #   my @seen;
-  #     my $models = $self->{'models'};
-  #   my $positions = _model_positions ($self);
-  #   foreach my $mnum (0 .. $#$models) {
-  #     my $model = $models->[$mnum];
-  #     my $reorder = $model->can('reorder') or next;
-  #     my $lo = $positions->[$mnum];
-  #     my $hi = $positions->[$mnum+1] - 1;
-  #     my @subarray = (0 .. $hi-$lo);
-  #     my $diff = 0;
-  #     foreach my $index ($lo .. $hi) {
-  #
-  #     }
-  #     $diff or next;
-  #     { local $self->{'suppress_signals'} = 1;
-  #       $reorder->(@subarray);
-  #     }
-  #   }
 }
 
 sub swap {
@@ -838,25 +813,23 @@ sub DRAG_DATA_GET {
 
 sub _drag_source {
   my ($method, $self, $path, @sel_arg) = @_;
-  if (DEBUG) { print "ListModelConcat \U$method\E path=",
-                 $path->to_string,"\n"; }
+  ### ListModelConcat: "\U$method\E path=".$path->to_string
 
   if ($path->get_depth != 1) {
-    if (DEBUG) { print "  no, not a toplevel row\n"; }
+    ### no, not a toplevel row
     return 0;
   }
   my ($index) = $path->get_indices;
   my ($model, $subindex) = _index_to_subindex ($self, $index);
 
   if (! $model->isa('Gtk2::TreeDragSource')) {
-    if (DEBUG) { print "  no, submodel not a TreeDragSource\n"; }
+    ### no, submodel not a TreeDragSource
     return 0;
   }
   my $subpath = Gtk2::TreePath->new_from_indices ($subindex);
-  if (DEBUG) { print "  submodel row_draggable subpath=",
-                 $subpath->to_string,"\n"; }
+  ### submodel row_draggable subpath: $subpath->to_string
   my $ret = $model->$method ($subpath, @sel_arg);
-  if (DEBUG) { print "  ",$ret?"yes":"no","\n"; }
+  ### submodel result: $ret
   return $ret;
 }
 
@@ -876,16 +849,12 @@ sub DRAG_DATA_RECEIVED {
 }
 sub _drag_dest {
   my ($self, $dst_path, $sel, $method) = @_;
-  if (DEBUG) { print "ListModelConcat \U$method\E, to path=",
-                 $dst_path->to_string," type=",$sel->type->name,"\n";
-               if ($sel->type->name eq 'GTK_TREE_MODEL_ROW') {
-                 my ($src_model, $src_path) = $sel->get_row_drag_data;
-                 print "  src_model=$src_model src_path=",
-                   $src_path->to_string,"\n";
-               }}
+  ### ListModelConcat: "\U$method\E, to path=".$dst_path->to_string
+  ### type: $sel->type->name
+  ### sel row: $sel->type->name eq 'GTK_TREE_MODEL_ROW' && do { my ($src_model, $src_path) = $sel->get_row_drag_data; "  src_model=$src_model src_path=".$src_path->to_string }
 
   if ($dst_path->get_depth != 1) {
-    if (DEBUG) { print "  no, not a toplevel row\n"; }
+    ### no, not a toplevel row
     return 0;
   }
   my ($dst_index) = $dst_path->get_indices;
@@ -893,15 +862,15 @@ sub _drag_dest {
     = _index_to_subindex_post ($self, $dst_index);
 
   if (! $dst_submodel->isa('Gtk2::TreeDragDest')) {
-    if (DEBUG) { print "  no, submodel not a TreeDragDest\n"; }
+    ### no, submodel not a TreeDragDest
     return 0;
   }
   my $dst_subpath = Gtk2::TreePath->new_from_indices ($dst_subindex);
   if (! $dst_submodel->$method ($dst_subpath, $sel)) {
-    if (DEBUG) { print "  no, submodel $method() false\n"; }
+    ### no, submodel $method() false
     return 0;
   }
-  if (DEBUG) { print "  yes from submodel\n"; }
+  ### yes from submodel
   return 1;
 }
 
@@ -922,7 +891,7 @@ sub _index_to_subindex_post {
 1;
 __END__
 
-=for stopwords TreeModels Concat eg ListStores ListModelConcat TreeDragSource TreeDragDest submodels submodel ie Arrayref Eg ListStore Gtk Iter iters versa TreeModelFilter iter arrayref func TreeModel TreeModelFilters Ryde
+=for stopwords TreeModels Concat eg ListStores ListModelConcat Gtk2-Ex-ListModelConcat TreeDragSource TreeDragDest submodels submodel ie Arrayref Eg ListStore Iter iters versa TreeModelFilter iter arrayref func TreeModel TreeModelFilters Ryde Gtk2-Perl
 
 =head1 NAME
 

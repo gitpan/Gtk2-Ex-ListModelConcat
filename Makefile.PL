@@ -37,12 +37,17 @@ MyMakeMakerExtras::WriteMakefile
                     # version 1.201 for stack fix in drag_data_get(), and at
                     # least 1.200 for it and $iter->set() to exist
                     'Gtk2' => '1.201',
-
                     # part of Glib, used explicitly
                     'Glib::Object::Subclass' => 0,
 
                     # my Glib-Ex-ObjectBits
                     'Glib::Ex::SignalIds' => 0,
+
+                    # my Gtk2-Ex-WidgetBits
+                    'Gtk2::Ex::TreeModel::ImplBits' => 17,
+
+                    # 1.18 for pure-perl refaddr() fix
+                    'Scalar::Util' => 1.18,
                    },
 
    META_MERGE
@@ -53,6 +58,7 @@ MyMakeMakerExtras::WriteMakefile
              => { description => 'Have "make test" do as much as possible.',
                   requires => { 'Test::NoWarnings' => 0,
                                 'Test::Weaken' => 2,
+                                'Test::Weaken::Gtk2' => 0,
                               },
                 },
            },

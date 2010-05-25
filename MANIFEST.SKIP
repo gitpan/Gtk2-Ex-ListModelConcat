@@ -40,6 +40,8 @@
 # ExtUtils::MakeMaker leaving Makefile.old
 # and "myman" leaving MANIFEST.old
 \.old$
+# ExtUtils::MakeMaker "metafile" rule temporary, left behind if interrupted
+^META_new\.yml$
 
 # built - MakeMaker
 ^Makefile$
@@ -48,6 +50,11 @@
 ^TAGS$
 # MakeMaker 6.18 to 6.25, apparently
 ^blibdirs\.ts$
+# msdos compiler output stuff using gcc,
+# "XSFILENAME.def" extension, and others fixed names it seems
+\.def$
+^dll\.base$
+^dll\.exp$
 
 # built - cdbs and debhelper
 ^debian/stamp-
@@ -88,10 +95,15 @@
 devel/h2xs/TestConstFoo/
 
 # special case mall executables
-devel/hblk
-devel/mallopt
-devel/mallstats
-devel/malltrim
+^devel/hblk$
+^devel/mallopt$
+^devel/mallstats$
+^devel/malltrim$
+# special case fli executables
+^devel/mmap-multi$
+# special case widget-bits executables
+^devel/grandom$
+^devel/grandom-[a-z]+$
 
 # special htmlext environs
 ^test-dist/

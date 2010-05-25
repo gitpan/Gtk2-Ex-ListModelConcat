@@ -23,9 +23,7 @@ use warnings;
 use Gtk2::Ex::ListModelConcat;
 use Test::More tests => 249;
 
-use FindBin;
-use File::Spec;
-use lib File::Spec->catdir($FindBin::Bin,'inc');
+use lib 't';
 use MyTestHelpers;
 
 SKIP: { eval 'use Test::NoWarnings; 1'
@@ -33,38 +31,21 @@ SKIP: { eval 'use Test::NoWarnings; 1'
 
 use constant VERBOSE => 0;
 
-my $want_version = 5;
-cmp_ok ($Gtk2::Ex::ListModelConcat::VERSION, '>=', $want_version,
-        'VERSION variable');
-cmp_ok (Gtk2::Ex::ListModelConcat->VERSION,  '>=', $want_version,
-        'VERSION class method');
-Gtk2::Ex::ListModelConcat->VERSION ($want_version);
 {
+  my $want_version = 7;
+  is ($Gtk2::Ex::ListModelConcat::VERSION, $want_version,
+      'VERSION variable');
+  is (Gtk2::Ex::ListModelConcat->VERSION,  $want_version,
+      'VERSION class method');
+  Gtk2::Ex::ListModelConcat->VERSION ($want_version);
+
   my $concat = Gtk2::Ex::ListModelConcat->new;
-  cmp_ok ($concat->VERSION, '>=', $want_version, 'VERSION object method');
+  is ($concat->VERSION, $want_version, 'VERSION object method');
   $concat->VERSION ($want_version);
 }
 
 require Gtk2;
 MyTestHelpers::glib_gtk_versions();
-
-# pretend insert_with_values() not available, as pre-Gtk 2.6
-#
-if ($ENV{'MY_DEVELOPMENT_HACK_NO_INSERT_WITH_VALUES'}) {
-  diag "Applying MY_DEVELOPMENT_HACK_NO_INSERT_WITH_VALUES";
-
-  Gtk2::ListStore->can('insert_with_values'); # force autoload
-  diag " can('insert_with_values'): ",
-    Gtk2::ListStore->can('insert_with_values')||'no',"\n";
-
-  { no warnings 'once';
-    undef *Gtk2::ListStore::insert_with_values;
-  }
-
-  diag " can('insert_with_values'): ",
-    Gtk2::ListStore->can('insert_with_values')||'no',"\n";
-  die if Gtk2::ListStore->can('insert_with_values');
-}
 
 
 # return arrayref
@@ -1017,7 +998,7 @@ SKIP: {
 #------------------------------------------------------------------------------
 # remove
 
-diag ('remove');
+diag 'remove';
 {
   my $s1 = Gtk2::ListStore->new ('Glib::String');
   my $s2 = Gtk2::ListStore->new ('Glib::String');
@@ -1066,6 +1047,7 @@ diag ('remove');
              [ ]);
 }
 
+# three copies of one model
 {
   my $store = Gtk2::ListStore->new ('Glib::String');
   $store->set_value ($store->insert(0), 0=>'zero');
@@ -1082,10 +1064,14 @@ diag ('remove');
   is_deeply (listmodel_contents($concat),
              [ 'one', 'one', 'one' ]);
 
-  ok (! $concat->remove ($iter));
-  ok (! $concat->iter_is_valid ($iter));
-  is_deeply (listmodel_contents($store), [ ]);
-  is_deeply (listmodel_contents($concat), [ ]);
+  ok (! $concat->remove ($iter),
+      'remove() last elem of three copies - return no further elements');
+  ok (! $concat->iter_is_valid ($iter),
+      'remove() last elem of three copies - iter invalidated');
+  is_deeply (listmodel_contents($store), [ ],
+             'remove() last elem of three copies - submodel empty');
+  is_deeply (listmodel_contents($concat), [ ],
+             'remove() last elem of three copies - concat empty');
 }
 
 {
@@ -1248,7 +1234,7 @@ diag ('reorder');
              ($concat,
               sub { my $iter_a = $concat->iter_nth_child(undef,1);
                     my $iter_b = $concat->iter_nth_child(undef,2);
-                    $concat->swap ($iter_a, $iter_b)
+                    $concat->swap ($iter_a, $iter_b);
                   }),
              { count => 1,
                path  => [],
@@ -1275,7 +1261,7 @@ diag ('reorder');
              ($concat,
               sub { my $iter_a = $concat->iter_nth_child(undef,0);
                     my $iter_b = $concat->iter_nth_child(undef,1);
-                    $concat->swap ($iter_a, $iter_b)
+                    $concat->swap ($iter_a, $iter_b);
                   }),
              { count => 1,
                path  => [],
@@ -1301,7 +1287,7 @@ diag ('reorder');
   is_deeply (listen_reorder ($concat,
                              sub { my $iter_a = $s2->iter_nth_child(undef,0);
                                    my $iter_b = $s2->iter_nth_child(undef,1);
-                                   $s2->swap ($iter_a, $iter_b)
+                                   $s2->swap ($iter_a, $iter_b);
                                  }),
              { count => 1,
                path  => [],
@@ -1321,7 +1307,7 @@ diag ('reorder');
   is_deeply (listen_reorder ($concat,
                              sub { my $iter_a = $s2->iter_nth_child(undef,0);
                                    my $iter_b = $s2->iter_nth_child(undef,1);
-                                   $s2->swap ($iter_a, $iter_b)
+                                   $s2->swap ($iter_a, $iter_b);
                                  }),
              { count => 1,
                path  => [],
