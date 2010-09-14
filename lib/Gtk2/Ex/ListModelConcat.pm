@@ -30,34 +30,52 @@ use Gtk2::Ex::TreeModel::ImplBits;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 7;
+our $VERSION = 8;
 
 use Glib::Object::Subclass
   'Glib::Object',
   interfaces => [ 'Gtk2::TreeModel',
                   'Gtk2::TreeDragSource',
-                  'Gtk2::TreeDragDest' ],
+                  'Gtk2::TreeDragDest',
+                  # Gtk2::Buildable new in Gtk 2.12, omit if not available
+                  Gtk2::Widget->isa('Gtk2::Buildable')
+                  ? ('Gtk2::Buildable') : ()
+                ],
   properties => [ Glib::ParamSpec->scalar
                   ('models',
                    'models',
                    'Arrayref of list model objects to concatenate.',
-                   Glib::G_PARAM_READWRITE)
+                   Glib::G_PARAM_READWRITE),
+
+                  Glib::ParamSpec->object
+                  ('append-model',
+                   'append-model',
+                   'Append a model to the concatenation.',
+                   'Gtk2::TreeModel',
+                   ['writable']),
                 ];
 
 sub INIT_INSTANCE {
   my ($self) = @_;
+  ### ListModelConcat INIT_INSTANCE()
   Gtk2::Ex::TreeModel::ImplBits::random_stamp ($self);
   $self->{'models'} = [];
 }
 
 sub SET_PROPERTY {
   my ($self, $pspec, $newval) = @_;
+  ### ListModelConcat SET_PROPERTY(): $pspec->get_name
+  ### $newval
   my $pname = $pspec->get_name;
-  ### ListModelConcat SET_PROPERTY: $pname
 
+  if ($pname eq 'append_model') {
+    $self->append_model ($newval);
+    return;
+  }
   if ($pname eq 'models') {
     foreach my $model (@$newval) {
-      $model->isa('Gtk2::TreeModel') or croak "not a TreeModel: $model";
+      (Scalar::Util::blessed($model) && $model->isa('Gtk2::TreeModel'))
+        or croak 'ListModelConcat: sub-model is not a Gtk2::TreeModel';
     }
     my $models = $self->{'models'};
     @$models = @$newval;  # copy input
@@ -89,11 +107,22 @@ sub SET_PROPERTY {
          $model->signal_connect (row_inserted=> \&_do_row_inserted,$userdata),
          @reordered);
     }
+    ### models now: $self->{'models'}
 
   } else {
     $self->{$pname} = $newval;  # per default GET_PROPERTY
   }
 }
+
+sub append_model {
+  my $self = shift;
+  ### ListModelConcat append_model(): @_
+  $self->set_property (models => [ @{$self->{'models'}}, @_ ]);
+}
+
+
+#------------------------------------------------------------------------------
+# TreeModel interface
 
 # gtk_tree_model_get_flags
 #
@@ -103,7 +132,7 @@ use constant GET_FLAGS => [ 'list-only' ];
 #
 sub GET_N_COLUMNS {
   my ($self) = @_;
-  ### ListModelConcat get_n_columns
+  ### ListModelConcat GET_N_COLUMNS()
   my $model = $self->{'models'}->[0]
     || return 0; # when no models
   return $model->get_n_columns;
@@ -113,7 +142,7 @@ sub GET_N_COLUMNS {
 #
 sub GET_COLUMN_TYPE {
   my ($self, $col) = @_;
-  #### ListModelConcat get_column_type
+  #### ListModelConcat GET_COLUMN_TYPE()
   my $model = $self->{'models'}->[0] or _no_submodels('get_column_type');
   return $model->get_column_type ($col);
 }
@@ -122,7 +151,7 @@ sub GET_COLUMN_TYPE {
 #
 sub GET_ITER {
   my ($self, $path) = @_;
-  #### ListModelConcat get_iter, path: $path->to_string
+  #### ListModelConcat GET_ITER(), path: $path->to_string
   if ($path->get_depth != 1) { return undef; }
   my ($index) = $path->get_indices;
   if ($index >= _total_length($self)) { return undef; }
@@ -344,6 +373,7 @@ sub _no_submodels {
 
 
 #------------------------------------------------------------------------------
+# sub-model signals
 
 # 'row-changed' on the submodels
 # called multiple times if a model is present multiple times
@@ -785,7 +815,7 @@ sub _treemodel_extract_row {
 }
 
 #------------------------------------------------------------------------------
-# drag source Gtk2::TreeDragSource
+# Gtk2::TreeDragSource interface, drag source 
 
 # gtk_tree_drag_source_row_draggable ($self, $path)
 #
@@ -834,7 +864,7 @@ sub _drag_source {
 }
 
 #------------------------------------------------------------------------------
-# drag destination Gtk2::TreeDragDest
+# Gtk2::TreeDragDest interface, drag destination
 
 # gtk_tree_drag_dest_row_drop_possible
 # gtk_tree_drag_dest_drag_data_received
@@ -886,6 +916,15 @@ sub _index_to_subindex_post {
   my $model = $self->{'models'}->[-1]
     or return (undef, undef);  # no models at all
   return ($model, $index - $positions->[-2]);
+}
+
+#------------------------------------------------------------------------------
+# Gtk2::Buildable interface
+
+sub ADD_CHILD {
+  my ($self, $builder, $child, $type) = @_;
+  ### ListModelConcat ADD_CHILD(): @_
+  $self->append_model ($child);
 }
 
 1;
@@ -955,17 +994,17 @@ it cannot be inside itself (directly or indirectly).
 
 =head1 DRAG AND DROP
 
-ListModelConcat implements TreeDragSource and TreeDragDest, allowing rows to
-be moved by dragging in C<Gtk2::TreeView> or similar.  The actual operations
-are delegated to the submodels, so a row can be dragged if the originating
-submodel is a TreeDragSource and a location is a drop point if the submodel
-there is a TreeDragDest.
+ListModelConcat implements C<Gtk2::TreeDragSource> and C<Gtk2::TreeDragDest>
+interfaces, allowing rows to be moved by dragging in C<Gtk2::TreeView> or
+similar.  The actual operations are delegated to the submodels, so a row can
+be dragged if the originating submodel is a TreeDragSource and a location is
+a drop point if its submodel is a TreeDragDest.
 
 It's worth noting the standard C<Gtk2::ListStore> models only accept drops
 of their own rows, ie. a re-ordering, not movement of rows between different
 models.  This is reasonable since different models might have different
-natures, but you might want to subclass or use a wrapper to make a more
-liberal policy between compatible models.
+natures, but you might want to subclass or use a wrapper for a more liberal
+policy among compatible models.
 
 =head1 PROPERTIES
 
@@ -984,6 +1023,12 @@ be that adding or removing a big model could generate thousands of fairly
 pointless signals.  The suggestion is to treat C<models> as if it were
 "construct-only" and make a new Concat for a new set of models.
 
+=item C<append-model> (C<Gtk2::TreeModel>, write-only)
+
+A write-only pseudo-property which appends a model to the Concat, per the
+C<append_model> method below.  This can be used to add models from a
+C<Gtk2::Builder> (see L</BUILDABLE> below).
+
 =back
 
 =head1 FUNCTIONS
@@ -998,6 +1043,12 @@ Create and return a new Concat object.  Optional key/value pairs set initial
 properties per C<< Glib::Object->new >>.  Eg.
 
  my $concat = Gtk2::Ex::ListModelConcat->new (models => [$m1,$m2]);
+
+=item C<< $concat->append_model ($model, ...) >>
+
+Append each given C<$model> to those already in C<$concat>.  See
+L</PROPERTIES> above for an equivalent C<append-model> property and notes on
+signal emission.
 
 =back
 
@@ -1116,8 +1167,45 @@ C<row-inserted> and C<row-deleted> is always depth 1, and the path to
 C<rows-reordered> is always depth 0 and the iter there always C<undef>.
 
 When a change occurs in a sub-model the corresponding signal is reported up
-through Concat.  The path and iter are of course reported by the Concat in
-its "concatenated" coordinates and iters, not the sub-model's.
+through Concat.  The path and iter are of course reported up in the
+"concatenated" coordinates and iters, not the sub-model's.
+
+=head1 BUILDABLE
+
+ListModelConcat implements the C<Gtk2::Buildable> interface of Gtk 2.12 and
+up, allowing C<Gtk2::Builder> to construct a Concat with child sub-model
+objects.  Sub-models can be added either through the C<append-model>
+pseudo-property for separately created model objects,
+
+    <object class="Gtk2__Ex__ListModelConcat" id="mylmc">
+      <property name="append-model">mysubmodel-one</property>
+      <property name="append-model">mysubmodel-two</property>
+    </object>
+
+Or with C<< <child> >> elements constructing sub-model objects at that
+point,
+
+    <object class="Gtk2__Ex__ListModelConcat" id="mylmc">
+      <child>
+        <object class="GtkListStore" id="list1">
+          <columns><column type="gint"/></columns>
+          <data><row><col id="0">123</col></row></data>
+        </object>
+      </child>
+    </object>
+
+The two styles are just a matter of whether you prefer to create the
+sub-models at the top-level and add to a Concat by name, or make them in the
+concat and refer to them elsewhere by name.
+
+It's not a good idea to mix C<< <child> >> and C<append-model> since the
+order among the different settings may not be preserved.  As of Gtk 2.20 the
+builder works by adding all C<< <child> >> objects and then setting
+properties a bit later, or something like that, so C<< <child> >> objects
+end up before C<append-model> even if written the other way around.
+
+See F<examples/builder-append.pl> and F<examples/builder-children.pl> in the
+ListModelConcat sources for complete sample programs.
 
 =head1 BUGS
 
@@ -1129,14 +1217,13 @@ It mostly works to have a sub-model appear more than once in a Concat.  The
 only real problem is with the C<row-deleted> and C<row-inserted> signals.
 They're emitted on the Concat the right number of times, but the multiple
 inserts/deletes are all present in the data as of the first emit, which
-could confuse handler code.  (Perhaps some sort of temporary index mapping
+could confuse handler code.  Perhaps some sort of temporary index mapping
 could make the changes seem one-at-a-time, except the deleted row contents
-have already gone ...)
+have already gone.
 
 What does work fine though is to have multiple TreeModelFilters (or similar)
 selecting different parts of a single underlying model.  As long as a given
-row only appears once it doesn't matter where its ultimate storage location
-is.
+row only appears once it doesn't matter where its ultimate storage is.
 
 =head1 SEE ALSO
 

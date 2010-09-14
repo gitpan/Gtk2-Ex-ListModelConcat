@@ -17,6 +17,10 @@ with Gtk2-Ex-ListModelConcat.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
+Version 8, April 2010
+    - new buildable interface
+    - new append-model property
+
 Version 7, April 2010
     - use refaddr() just in case a model overloads numizing
 

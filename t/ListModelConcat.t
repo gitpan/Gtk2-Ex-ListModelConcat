@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
 # Copyright 2008, 2009, 2010 Kevin Ryde
 
@@ -21,18 +21,16 @@ use 5.008;
 use strict;
 use warnings;
 use Gtk2::Ex::ListModelConcat;
-use Test::More tests => 249;
+use Test::More tests => 248;
 
 use lib 't';
 use MyTestHelpers;
-
-SKIP: { eval 'use Test::NoWarnings; 1'
-          or skip 'Test::NoWarnings not available', 1; }
+BEGIN { MyTestHelpers::nowarnings() }
 
 use constant VERBOSE => 0;
 
 {
-  my $want_version = 7;
+  my $want_version = 8;
   is ($Gtk2::Ex::ListModelConcat::VERSION, $want_version,
       'VERSION variable');
   is (Gtk2::Ex::ListModelConcat->VERSION,  $want_version,

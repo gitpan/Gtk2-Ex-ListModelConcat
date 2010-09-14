@@ -17,37 +17,40 @@
 # You should have received a copy of the GNU General Public License along
 # with Gtk2-Ex-ListModelConcat.  If not, see <http://www.gnu.org/licenses/>.
 
+
 use strict;
 use warnings;
-use Test::More;
-
-use lib 't';
-use MyTestHelpers;
-BEGIN { MyTestHelpers::nowarnings() }
-
-plan tests => 2;
+use Gtk2;
 
 {
-  package MyOverloadStore;
-  use Gtk2;
-  use Glib::Object::Subclass 'Gtk2::ListStore';
-  use Carp;
-  use overload '+' => \&add, fallback => 1;
-  sub add {
-    my ($x, $y, $swap) = @_;
-    croak "I am not in the adding mood";
-  }
+  package Foo;
+  use strict;
+  use warnings;
+  use Glib;
+  use Glib::Object::Subclass
+    'Glib::Object',
+      properties => [Glib::ParamSpec->string
+                     ('mystring',
+                      'mystring',
+                      'Blurb.',
+                      '', # default
+                      Glib::G_PARAM_READWRITE),
+                    ];
 }
 
-require Gtk2::Ex::ListModelConcat;
+my $builder = Gtk2::Builder->new;
+$builder->add_from_string (<<'HERE');
+<interface>
+  <object class="Foo" id="myfoo">
+    <property name="mystring">hello</property>
+  </object>
+</interface>
+HERE
 
-{
-  my $store = MyOverloadStore->new;
-  ok (! eval { my $x = $store+0; 1 },
-      'store+0 throws error');
+my $foo = $builder->get_object('myfoo');
+print $foo,"\n";
+print $foo->get('mystring'),"\n";
 
-  my $concat = Gtk2::Ex::ListModelConcat->new (models => [$store]);
-  ok (1);
-}
+print "interfaces: ",Glib::Type->list_interfaces('Foo'),"\n";
 
 exit 0;
