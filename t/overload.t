@@ -25,7 +25,7 @@ use lib 't';
 use MyTestHelpers;
 BEGIN { MyTestHelpers::nowarnings() }
 
-plan tests => 2;
+plan tests => 1;
 
 {
   package MyOverloadStore;
@@ -41,13 +41,12 @@ plan tests => 2;
 
 require Gtk2::Ex::ListModelConcat;
 
-{
-  my $store = MyOverloadStore->new;
-  ok (! eval { my $x = $store+0; 1 },
-      'store+0 throws error');
-
-  my $concat = Gtk2::Ex::ListModelConcat->new (models => [$store]);
-  ok (1);
+my $store = MyOverloadStore->new;
+if (eval { my $x = $store+0; 1 }) {
+  plan skip_all => 'somehow overloaded object+0 no error, maybe perl 5.8.x badness?';
 }
+
+my $concat = Gtk2::Ex::ListModelConcat->new (models => [$store]);
+ok (1);
 
 exit 0;

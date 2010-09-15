@@ -30,7 +30,7 @@ BEGIN { MyTestHelpers::nowarnings() }
 use constant VERBOSE => 0;
 
 {
-  my $want_version = 8;
+  my $want_version = 9;
   is ($Gtk2::Ex::ListModelConcat::VERSION, $want_version,
       'VERSION variable');
   is (Gtk2::Ex::ListModelConcat->VERSION,  $want_version,

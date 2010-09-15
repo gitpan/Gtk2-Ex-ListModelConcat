@@ -17,7 +17,10 @@ with Gtk2-Ex-ListModelConcat.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-Version 8, April 2010
+Version 9, September 2010
+    - tests skip overload check somehow not working in perl 5.8
+
+Version 8, September 2010
     - new buildable interface
     - new append-model property
 
