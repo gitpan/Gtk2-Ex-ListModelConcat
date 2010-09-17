@@ -30,7 +30,7 @@ use Gtk2::Ex::TreeModel::ImplBits;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 9;
+our $VERSION = 10;
 
 use Glib::Object::Subclass
   'Glib::Object',

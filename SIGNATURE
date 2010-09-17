@@ -15,13 +15,13 @@ not run its Makefile.PL or Build.PL.
 Hash: SHA1
 
 SHA1 842745cb706f8f2126506f544492f7a80dbe29b3 COPYING
-SHA1 e850e611033d7a2cf11a125b3d453af6f7ea46d7 Changes
+SHA1 939b6a61fa852318fe6c4ed1f9500de56c7d01b8 Changes
 SHA1 142141413532db55e59064da7a298cb1882edf3a MANIFEST
 SHA1 e6e7c2904ea5d300c0ddf70fc5a80f5005229aa9 MANIFEST.SKIP
-SHA1 f789a0d72901760a4e6baddaa54bc2a0d4168d1e META.yml
+SHA1 645aa2b02c7f39486123039992c2eac8ecde595e META.yml
 SHA1 9c33ec3c8baeb141df422322d7ce7de9b86d9ea5 Makefile.PL
 SHA1 91abf139acd8d10cd1d7c7472210f06ff903a0f2 README
-SHA1 2eaf778d895d7a029b5ddd114d63f6916cc20023 debian/changelog
+SHA1 a2e655c2b87085741f44e210306adc357aff41fb debian/changelog
 SHA1 ac3478d69a3c81fa62e60f5c3696165a4e5e6ac4 debian/compat
 SHA1 b74554037aee38ae34ebfda2a29b5a05a34fb4d9 debian/control
 SHA1 5b869c7b089726e76e8af61ce74590b6dec2cd10 debian/copyright
@@ -39,10 +39,10 @@ SHA1 0e045361167fbaaaab93ffa0242bc4f3655ed693 examples/builder-children.pl
 SHA1 62d14d3f5d60569cca4bc38526bc180df982e2a4 examples/demo.pl
 SHA1 3cf3345a9177dbe362dfc8fbf192272f4a611ca8 inc/MyMakeMakerExtras.pm
 SHA1 692a1ddc2ca6b98cac7b48ea40bc1ac1509e8ed9 inc/my_pod2html
-SHA1 9243c083b6b15c974cf7addf363ebaf7f2c4587e lib/Gtk2/Ex/ListModelConcat.pm
-SHA1 db9720cb55f6d38ed7c96b26c65e12801ae761ce t/ListModelConcat.t
-SHA1 cc9d34bca6c40211dd6aa8fee844bb1a7f908461 t/MyTestHelpers.pm
-SHA1 7b34cfc4e2f61fe85a0fc3f05422a278c0b1b6be t/overload.t
+SHA1 7e790cebe2da48cfe6f9de5e01b137ffbfebefc4 lib/Gtk2/Ex/ListModelConcat.pm
+SHA1 77103732e5a319a19a4a4fccdfb016d046b67f02 t/ListModelConcat.t
+SHA1 5e5680b471811244fe93571efc23e7b6089cac3b t/MyTestHelpers.pm
+SHA1 259767d339c56da1a62571de9dfc6ecb34e494bd t/overload.t
 SHA1 eb80729bf9dda7e0f1687fa85c5bd972290cf1a1 t/test-weaken.t
 SHA1 9127f78a0dfa04976acbb979dd7862ef59a74c58 xt/0-META-read.t
 SHA1 37abd43b41068804ea4bb099fdd89af21be82926 xt/0-Test-DistManifest.t
@@ -52,7 +52,7 @@ SHA1 fb517c2fae5ddac559318bf6a224949115ea3129 xt/0-Test-YAML-Meta.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.10 (GNU/Linux)
 
-iD8DBQFMkUSrLFMCIV9q3ToRAmGUAJsHoEnfN2UGgiNeuVI5ahsizUE5owCfUimL
-lRMYod8BfL73N52EnCULbrg=
-=DaDq
+iD8DBQFMk979LFMCIV9q3ToRAlcDAJ9kRoQx/a52GM8n3csTMCLi+nXeTQCglxgE
+dFmsFKRs6Wtr7cIQyz4NPtk=
+=3GDS
 -----END PGP SIGNATURE-----

@@ -17,6 +17,9 @@ with Gtk2-Ex-ListModelConcat.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
+Version 10, September 2010
+    - tests fix overload test more
+
 Version 9, September 2010
     - tests skip overload check somehow not working in perl 5.8
 
